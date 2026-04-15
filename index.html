@@ -1,1 +1,36 @@
+// Game State
+let score = 0;
+let totalMissed = 0;
+let bowl = { x: 200, y: 350, width: 80, height: 40 };
+let candies = [];
+let gameActive = true;
 
+// The Game Loop
+function update() {
+    if (!gameActive) return;
+
+    // Move candies down
+    candies.forEach((candy, index) => {
+        candy.y += candy.speed;
+
+        // Collision Check (Candy hits bowl)
+        if (checkCollision(candy, bowl)) {
+            if (candy.type === 'rotten') {
+                score = 0; // The "Knockout" mechanic
+                triggerExplosionEffect();
+            } else {
+                score++;
+            }
+            candies.splice(index, 1);
+        }
+
+        // Logic for missing a candy
+        if (candy.y > canvas.height && candy.type !== 'rotten') {
+            totalMissed++;
+            candies.splice(index, 1);
+        }
+    });
+
+    draw();
+    requestAnimationFrame(update);
+}
