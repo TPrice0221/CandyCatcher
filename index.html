@@ -4,144 +4,257 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sugar Popz: Rhythm Catch</title>
+
     <style>
         :root { --neon-pink: #ff007f; --neon-cyan: #00ffcc; }
-        body { margin: 0; background: #0a0a0a; color: white; font-family: 'Courier New', Courier, monospace; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        canvas { background: #111; border: 3px solid var(--neon-pink); border-radius: 15px; cursor: crosshair; box-shadow: 0 0 30px rgba(255, 0, 127, 0.3); }
-        
-        /* UI Styling */
-        #game-ui { position: absolute; top: 10px; width: 400px; display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box; pointer-events: none; }
-        .stat-box { background: rgba(0,0,0,0.7); border: 1px solid var(--neon-cyan); padding: 5px 15px; border-radius: 5px; }
 
-        /* The Prize Pop-up */
-        #prize-modal { 
-            position: absolute; display: none; background: rgba(0,0,0,0.95); 
-            border: 5px solid var(--neon-cyan); padding: 40px; text-align: center; 
-            z-index: 100; border-radius: 20px; box-shadow: 0 0 50px var(--neon-cyan);
+        body {
+            margin: 0;
+            background: #0a0a0a;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+
+            touch-action: none; /* MOBILE FIX */
         }
-        .code { font-size: 32px; color: var(--neon-cyan); letter-spacing: 5px; margin: 20px 0; font-weight: bold; }
-        button { background: var(--neon-pink); border: none; color: white; padding: 10px 20px; cursor: pointer; font-weight: bold; text-transform: uppercase; }
+
+        canvas {
+            background: #111;
+            border: 3px solid var(--neon-pink);
+            border-radius: 15px;
+            cursor: crosshair;
+            box-shadow: 0 0 30px rgba(255, 0, 127, 0.3);
+        }
+
+        /* UI */
+        #game-ui {
+            position: absolute;
+            top: 10px;
+            width: 400px;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+
+        .stat-box {
+            background: rgba(0,0,0,0.7);
+            border: 1px solid var(--neon-cyan);
+            padding: 5px 15px;
+            border-radius: 5px;
+        }
+
+        /* WIN MODAL */
+        #prize-modal {
+            position: absolute;
+            display: none;
+            background: rgba(0,0,0,0.95);
+            border: 5px solid var(--neon-cyan);
+            padding: 40px;
+            text-align: center;
+            z-index: 100;
+            border-radius: 20px;
+            box-shadow: 0 0 50px var(--neon-cyan);
+        }
+
+        .code {
+            font-size: 32px;
+            color: var(--neon-cyan);
+            letter-spacing: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        /* MISS MODAL (NEW) */
+        #miss-modal {
+            position: absolute;
+            display: none;
+            background: rgba(0,0,0,0.95);
+            border: 5px solid red;
+            padding: 30px;
+            text-align: center;
+            z-index: 100;
+            border-radius: 20px;
+            box-shadow: 0 0 40px red;
+        }
+
+        #miss-modal h2 {
+            color: red;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background: var(--neon-pink);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
     </style>
 </head>
+
 <body>
 
-    <div id="game-ui">
-        <div class="stat-box">BEAT: <span id="streak">100</span>%</div>
-        <div class="stat-box">SCORE: <span id="score">0</span></div>
-    </div>
+<div id="game-ui">
+    <div class="stat-box">BEAT: <span id="streak">100</span>%</div>
+    <div class="stat-box">SCORE: <span id="score">0</span></div>
+</div>
 
-    <div id="prize-modal">
-        <h1>🏆 PERFECT RUN!</h1>
-        <p>You caught every beat. Here is your reward:</p>
-        <div class="code">SUGARPOPZ10</div>
-        <p>10% OFF AT THE STORE</p>
-        <button onclick="location.reload()">PLAY AGAIN</button>
-    </div>
+<!-- WIN -->
+<div id="prize-modal">
+    <h1>🏆 PERFECT RUN!</h1>
+    <p>You caught every beat. Here is your reward:</p>
+    <div class="code">SUGARPOPZ10</div>
+    <p>10% OFF AT THE STORE</p>
+    <button onclick="location.reload()">PLAY AGAIN</button>
+</div>
 
-    <canvas id="gameCanvas"></canvas>
-    <p style="margin-top: 15px; font-size: 12px; color: #666;">DRAG TO MOVE • DON'T MISS A SINGLE CANDY</p>
+<!-- MISS (NEW) -->
+<div id="miss-modal">
+    <h2>💀 YOU MISSED</h2>
+    <p>The beat dropped... and so did you.</p>
+    <button onclick="location.reload()">TRY AGAIN</button>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+<p style="margin-top: 15px; font-size: 12px; color: #666;">
+    DRAG TO MOVE • DON'T MISS A SINGLE CANDY
+</p>
 
 <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 400; canvas.height = 600;
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 400;
+canvas.height = 600;
 
-    let score = 0;
-    let missed = false;
-    let gameActive = true;
-    let bowl = { x: 160, y: 540, w: 80, h: 20 };
-    let candies = [];
+let score = 0;
+let gameActive = true;
 
-    // --- WEB AUDIO SETUP ---
-    // In a real scenario, you'd load 'sugar_popz_beat.mp3' here
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    let audioCtx;
-    let analyser;
+let bowl = { x: 160, y: 540, w: 80, h: 20 };
+let candies = [];
 
-    function initAudio() {
-        if (audioCtx) return;
-        audioCtx = new AudioCtx();
-        analyser = audioCtx.createAnalyser();
-        // This is where you would connect your <audio> element to the analyser
-    }
+/* AUDIO (unchanged) */
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+let analyser;
 
-    // --- GAME LOGIC ---
-    function spawnCandy() {
-        if (!gameActive) return;
-        let isRotten = Math.random() < 0.15;
-        candies.push({
-            x: Math.random() * (canvas.width - 40) + 20,
-            y: -50,
-            type: isRotten ? 'rotten' : 'good',
-            speed: 4 + Math.random() * 3,
-            size: 25
-        });
-        setTimeout(spawnCandy, 800);
-    }
+function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new AudioCtx();
+    analyser = audioCtx.createAnalyser();
+}
 
-    function draw() {
-        if (!gameActive) return;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+/* GAME LOGIC */
+function spawnCandy() {
+    if (!gameActive) return;
 
-        // Draw Bowl
-        ctx.fillStyle = varColor('--neon-cyan');
-        ctx.shadowBlur = 15; ctx.shadowColor = varColor('--neon-cyan');
-        ctx.fillRect(bowl.x, bowl.y, bowl.w, bowl.h);
-        ctx.shadowBlur = 0;
+    let isRotten = Math.random() < 0.15;
 
-        candies.forEach((c, i) => {
-            c.y += c.speed;
-            
-            // Draw Candy
-            ctx.font = `${c.size}px Arial`;
-            ctx.fillText(c.type === 'rotten' ? '🤢' : '🍬', c.x - 12, c.y);
-
-            // Collision
-            if (c.y > bowl.y && c.y < bowl.y + bowl.h && c.x > bowl.x && c.x < bowl.x + bowl.w) {
-                if (c.type === 'rotten') {
-                    score = 0; // The "Knockout"
-                    document.body.style.backgroundColor = '#440000';
-                    setTimeout(() => document.body.style.backgroundColor = '#0a0a0a', 100);
-                } else {
-                    score += 10;
-                }
-                candies.splice(i, 1);
-            }
-
-            // Miss Condition (The Addictive Penalty)
-            if (c.y > canvas.height) {
-                if (c.type === 'good') {
-                    gameActive = false;
-                    alert("MISS! The beat dropped... try again for the prize.");
-                    location.reload();
-                }
-                candies.splice(i, 1);
-            }
-        });
-
-        document.getElementById('score').innerText = score;
-        
-        // WIN CONDITION: Usually triggered when the audio track ends
-        // For this demo, let's say 500 points wins the prize
-        if (score >= 500) {
-            gameActive = false;
-            document.getElementById('prize-modal').style.display = 'block';
-        }
-
-        requestAnimationFrame(draw);
-    }
-
-    function varColor(name) { return getComputedStyle(document.documentElement).getPropertyValue(name); }
-
-    canvas.addEventListener('mousemove', e => {
-        let rect = canvas.getBoundingClientRect();
-        bowl.x = (e.clientX - rect.left) - bowl.w / 2;
+    candies.push({
+        x: Math.random() * (canvas.width - 40) + 20,
+        y: -50,
+        type: isRotten ? 'rotten' : 'good',
+        speed: 4 + Math.random() * 3,
+        size: 25
     });
 
-    canvas.addEventListener('mousedown', initAudio); // Starts audio context on first click
-    
-    spawnCandy();
-    draw();
+    setTimeout(spawnCandy, 800);
+}
+
+function draw() {
+    if (!gameActive) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    /* DRAW BOWL */
+    ctx.fillStyle = getColor('--neon-cyan');
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = getColor('--neon-cyan');
+    ctx.fillRect(bowl.x, bowl.y, bowl.w, bowl.h);
+    ctx.shadowBlur = 0;
+
+    candies.forEach((c, i) => {
+        c.y += c.speed;
+
+        /* DRAW CANDY */
+        ctx.font = `${c.size}px Arial`;
+        ctx.fillText(c.type === 'rotten' ? '🤢' : '🍬', c.x - 12, c.y);
+
+        /* COLLISION */
+        if (c.y > bowl.y && c.y < bowl.y + bowl.h &&
+            c.x > bowl.x && c.x < bowl.x + bowl.w) {
+
+            if (c.type === 'rotten') {
+                score = 0;
+                document.body.style.backgroundColor = '#440000';
+                setTimeout(() => {
+                    document.body.style.backgroundColor = '#0a0a0a';
+                }, 100);
+            } else {
+                score += 10;
+            }
+
+            candies.splice(i, 1);
+        }
+
+        /* MISS CONDITION */
+        if (c.y > canvas.height) {
+            if (c.type === 'good') {
+                gameActive = false;
+                document.getElementById('miss-modal').style.display = 'block';
+            }
+            candies.splice(i, 1);
+        }
+    });
+
+    document.getElementById('score').innerText = score;
+
+    /* WIN */
+    if (score >= 500) {
+        gameActive = false;
+        document.getElementById('prize-modal').style.display = 'block';
+    }
+
+    requestAnimationFrame(draw);
+}
+
+function getColor(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name);
+}
+
+/* MOVEMENT (MOUSE + TOUCH) */
+function moveBowl(clientX) {
+    let rect = canvas.getBoundingClientRect();
+    bowl.x = (clientX - rect.left) - bowl.w / 2;
+
+    // clamp inside screen
+    bowl.x = Math.max(0, Math.min(canvas.width - bowl.w, bowl.x));
+}
+
+canvas.addEventListener('mousemove', e => {
+    moveBowl(e.clientX);
+});
+
+canvas.addEventListener('touchmove', e => {
+    moveBowl(e.touches[0].clientX);
+});
+
+/* START AUDIO ON INTERACTION */
+canvas.addEventListener('mousedown', initAudio);
+canvas.addEventListener('touchstart', initAudio);
+
+/* START GAME */
+spawnCandy();
+draw();
 </script>
+
 </body>
 </html>
