@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Sugar Popz: Sugar Rush Edition</title>
 
 <style>
@@ -14,6 +14,7 @@
 
 body {
     margin: 0;
+    padding: 0;
     background: radial-gradient(circle, #ff99cc 0%, #ff66b2 100%);
     font-family: 'Arial Rounded MT Bold', 'Helvetica', sans-serif;
     overflow: hidden;
@@ -21,45 +22,53 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
+    width: 100vw;
 }
 
+/* 🍭 ADAPTIVE GAME CONTAINER */
 #game-container {
     position: relative;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    height: 90vh; /* Takes up most of the screen height */
+    aspect-ratio: 3 / 4; /* Maintains arcade proportions */
+    max-width: 95vw;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
 }
 
 canvas {
     display: block;
+    width: 100%;
+    height: 100%;
     background: linear-gradient(to bottom, #ffe6f2 0%, #ffb3d9 100%);
     border: 10px solid white;
     border-radius: 40px;
-    cursor: crosshair;
+    cursor: none; /* Hide cursor to use candy bowl instead */
 }
 
+/* 🍬 UI ELEMENTS */
 #game-ui {
     position: absolute;
-    top: -60px;
+    top: -50px;
     width: 100%;
     display: flex;
-    justify-content: space-between;
+    justify-content: space-around;
     pointer-events: none;
 }
 
 .stat-box {
     background: white;
-    border: 4px solid var(--candy-pink);
-    padding: 8px 25px;
+    border: 3px solid var(--candy-pink);
+    padding: 5px 20px;
     border-radius: 50px;
     color: #d63384;
     font-weight: bold;
-    font-size: 20px;
+    font-size: clamp(14px, 2vw, 22px);
     box-shadow: 0 4px 0 var(--candy-pink);
 }
 
 .overlay {
     position: absolute;
     inset: 0;
-    background: rgba(255,105,180,0.9);
+    background: rgba(255,105,180,0.92);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -68,6 +77,7 @@ canvas {
     z-index: 100;
     border-radius: 30px;
     text-align: center;
+    padding: 20px;
 }
 
 .modal {
@@ -77,31 +87,28 @@ canvas {
     left: 50%;
     transform: translate(-50%, -50%);
     background: white;
-    padding: 40px;
+    padding: 30px;
     border-radius: 40px;
-    border: 10px solid var(--candy-pink);
+    border: 8px solid var(--candy-pink);
     text-align: center;
     z-index: 200;
-    box-shadow: 0 20px 0 #d63384;
-    min-width: 300px;
+    box-shadow: 0 15px 0 #d63384;
+    width: 70%;
 }
 
-h1 { font-size: 60px; text-shadow: 4px 4px #d63384; margin: 0; }
-h2 { color: #d63384; font-size: 32px; margin-top: 0; }
-
+h1 { font-size: clamp(30px, 8vw, 60px); text-shadow: 3px 3px #d63384; margin: 0; }
 button {
     margin-top: 20px;
-    padding: 20px 40px;
+    padding: 15px 30px;
     border: none;
     background: var(--mint);
     color: #4a0026;
-    font-size: 24px;
+    font-size: clamp(18px, 4vw, 26px);
     font-weight: bold;
     border-radius: 50px;
     cursor: pointer;
-    box-shadow: 0 6px 0 #00ccaa;
+    box-shadow: 0 5px 0 #00ccaa;
 }
-
 button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
 
 .trash-talk {
@@ -110,14 +117,14 @@ button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
     font-weight: bold;
     color: #ff0000;
     text-shadow: 2px 2px white;
-    font-size: 24px;
+    font-size: 28px;
     z-index: 1000;
-    animation: floatUp 1s forwards;
+    animation: floatUp 0.8s ease-out forwards;
 }
 
 @keyframes floatUp {
-    0% { transform: translateY(0); opacity: 1; }
-    100% { transform: translateY(-100px); opacity: 0; }
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-120px) scale(1.5); opacity: 0; }
 }
 </style>
 </head>
@@ -127,7 +134,8 @@ button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
 <div id="game-container">
     <div id="start-screen" class="overlay">
         <h1>SUGAR POPZ</h1>
-        <p style="font-size: 20px;">Fill the bowl to clear the level!</p>
+        <p>Catch the sweets!</p>
+        <p style="font-size: 0.8em;">(Move mouse/finger anywhere on screen to move)</p>
         <button onclick="startGame()">START RACE</button>
     </div>
 
@@ -139,13 +147,12 @@ button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
 
     <div id="game-over" class="modal">
         <h2>GLITCHED!</h2>
-        <p>A sweet hit the floor...</p>
-        <button onclick="location.reload()">RE-RACE</button>
+        <p>A sweet treat hit the street!</p>
+        <button onclick="location.reload()">TRY AGAIN</button>
     </div>
 
     <div id="level-up" class="modal">
         <h2>SWEET VICTORY!</h2>
-        <p>Prepare for a bigger Rush!</p>
         <button onclick="nextLevel()">NEXT ROUND</button>
     </div>
 
@@ -156,11 +163,12 @@ button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-canvas.width = 900;
-canvas.height = 700;
+// High internal resolution for crisp graphics
+canvas.width = 1000;
+canvas.height = 1400;
 
 let gameActive = false;
-let bowl = { x: 400, y: 620, w: 160, h: 65 };
+let bowl = { x: 400, y: 1250, w: 200, h: 80 };
 let candies = [];
 let collected = [];
 let particles = [];
@@ -168,11 +176,11 @@ let score = 0;
 let level = 1;
 let targetScore = 500;
 
-const candyTypes = ['🍬','🍭','🍩','🍫','🧁','🍦','🍪','🥨','🍮','🍰'];
+const candyTypes = ['🍬','🍭','🍩','🍫','🧁','🍦','🍪','🥨','🍰'];
 const rottenTypes = ['☠️','💀','🧪', '🍄', '💩'];
-const insults = ["LOSER!", "TOO SLOW!", "MOLDY!", "YUCK!", "GLITCH!", "RUDE!"];
+const insults = ["LOSER!", "TOO SLOW!", "MOLDY!", "YUCK!", "GLITCH!"];
 
-// 🎹 AUDIO ENGINE
+// 🎹 AUDIO
 let audioCtx;
 function playTick(freq, dur) {
     try {
@@ -189,73 +197,66 @@ function playTick(freq, dur) {
     } catch(e) {}
 }
 
-// SPRINKLE BACKDROP
-for (let i = 0; i < 70; i++) {
+// BACKDROP
+for (let i = 0; i < 80; i++) {
     particles.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        size: Math.random() * 5 + 2,
-        speed: Math.random() * 2 + 1,
+        size: Math.random() * 6 + 2,
+        speed: Math.random() * 3 + 1,
         color: ['#fff', '#ff99cc', '#00ffcc', '#ffff99'][Math.floor(Math.random()*4)]
     });
 }
 
 function spawnCandy() {
-    if (!gameActive) return; // Stop spawning if game is paused/level over
-
+    if (!gameActive) return;
     let isRotten = Math.random() < (0.12 + level * 0.03);
     candies.push({
-        x: Math.random() * (canvas.width - 100) + 50,
-        y: -50,
-        icon: isRotten 
-            ? rottenTypes[Math.floor(Math.random()*rottenTypes.length)]
-            : candyTypes[Math.floor(Math.random()*candyTypes.length)],
+        x: Math.random() * (canvas.width - 150) + 75,
+        y: -100,
+        icon: isRotten ? rottenTypes[Math.floor(Math.random()*rottenTypes.length)] : candyTypes[Math.floor(Math.random()*candyTypes.length)],
         type: isRotten ? "bad" : "good",
-        speed: 2 + level + (Math.random() * 1.5),
-        size: isRotten ? 55 : 35 + Math.random() * 15
+        speed: 4 + level + (Math.random() * 3),
+        size: isRotten ? 70 : 50 + Math.random() * 20
     });
-
-    // Recursively call spawnCandy based on level speed
-    let nextSpawn = Math.max(200, 1000 - level * 100);
-    setTimeout(spawnCandy, nextSpawn);
+    setTimeout(spawnCandy, Math.max(200, 1000 - level * 100));
 }
 
 function startGame() {
     document.getElementById("start-screen").style.display = "none";
     gameActive = true;
-    spawnCandy(); // Trigger the spawn loop
+    spawnCandy();
     requestAnimationFrame(draw);
-    
-    // Background beat loop
-    setInterval(() => { 
-        if(gameActive) playTick(80 + (level * 10), 0.1); 
-    }, 500);
+    setInterval(() => { if(gameActive) playTick(80 + (level * 10), 0.1); }, 500);
 }
 
 function nextLevel() {
     document.getElementById("level-up").style.display = "none";
     level++;
-    targetScore += 500;
-    candies = []; // Clear current falling ones
-    collected = []; // Clear bowl visuals
+    targetScore += 600;
+    candies = [];
+    collected = [];
     gameActive = true;
-    spawnCandy(); // RE-START the spawn loop for the new level
+    spawnCandy();
 }
 
 function showTrashTalk(text, x, y) {
     const el = document.createElement('div');
     el.className = 'trash-talk';
     el.innerText = text;
-    el.style.left = (x + canvas.offsetLeft - 50) + 'px';
-    el.style.top = (y + canvas.offsetTop) + 'px';
+    // Map canvas coordinates to screen coordinates
+    const rect = canvas.getBoundingClientRect();
+    const screenX = (x / canvas.width) * rect.width + rect.left;
+    const screenY = (y / canvas.height) * rect.height + rect.top;
+    el.style.left = screenX + 'px';
+    el.style.top = screenY + 'px';
     document.body.appendChild(el);
-    setTimeout(() => el.remove(), 1000);
+    setTimeout(() => el.remove(), 800);
 }
 
 function draw() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    // Background Particles
     particles.forEach(p => {
         ctx.fillStyle = p.color;
         ctx.beginPath();
@@ -270,18 +271,18 @@ function draw() {
         ctx.save();
         ctx.fillStyle = "white";
         ctx.strokeStyle = "var(--candy-pink)";
-        ctx.lineWidth = 8;
+        ctx.lineWidth = 12;
         ctx.beginPath();
-        ctx.roundRect(bowl.x, bowl.y, bowl.w, bowl.h, [0, 0, 40, 40]);
+        ctx.roundRect(bowl.x, bowl.y, bowl.w, bowl.h, [0, 0, 60, 60]);
         ctx.fill();
         ctx.stroke();
 
-        // Candy in Bowl Visual
-        collected.slice(-24).forEach((c,i)=>{
-            ctx.font = "24px Arial";
+        // Candy in bowl
+        collected.slice(-30).forEach((c,i)=>{
+            ctx.font = "35px Arial";
             let row = Math.floor(i / 6);
             let col = i % 6;
-            ctx.fillText(c, bowl.x + 15 + (col * 22), bowl.y + 15 + (row * 15));
+            ctx.fillText(c, bowl.x + 20 + (col * 30), bowl.y + 25 + (row * 20));
         });
         ctx.restore();
 
@@ -289,16 +290,14 @@ function draw() {
         for (let i = candies.length - 1; i >= 0; i--) {
             let c = candies[i];
             c.y += c.speed;
-            
             ctx.font = c.size + "px Arial";
             ctx.textAlign = "center";
             ctx.fillText(c.icon, c.x, c.y);
 
-            // Catch check
             if (c.y > bowl.y && c.y < bowl.y + bowl.h && c.x > bowl.x && c.x < bowl.x + bowl.w) {
                 if (c.type === "bad") {
                     collected = [];
-                    score = Math.max(0, score - 150);
+                    score = Math.max(0, score - 200);
                     showTrashTalk(insults[Math.floor(Math.random()*insults.length)], c.x, c.y);
                     playTick(40, 0.4);
                 } else {
@@ -310,7 +309,6 @@ function draw() {
                 continue;
             }
 
-            // Miss check
             if (c.y > canvas.height) {
                 if (c.type === "good") {
                     gameActive = false;
@@ -320,7 +318,6 @@ function draw() {
             }
         }
 
-        // Win check
         if (score >= targetScore) {
             gameActive = false;
             document.getElementById("level-up").style.display = "block";
@@ -334,17 +331,20 @@ function draw() {
     requestAnimationFrame(draw);
 }
 
-// Smooth Controls
-const updateBowlPos = (clientX) => {
+// 🖱 GLOBAL CONTROLS: Listen on window, not just canvas
+const handleInput = (clientX) => {
     let rect = canvas.getBoundingClientRect();
-    let targetX = clientX - rect.left - bowl.w/2;
+    // Calculate relative X position regardless of where the mouse/finger is on the screen
+    let scaleX = canvas.width / rect.width;
+    let targetX = (clientX - rect.left) * scaleX - bowl.w/2;
+    
+    // Smooth boundaries
     bowl.x = Math.max(0, Math.min(canvas.width - bowl.w, targetX));
 };
 
-canvas.addEventListener("mousemove", e => updateBowlPos(e.clientX));
-canvas.addEventListener("touchmove", e => {
-    e.preventDefault();
-    updateBowlPos(e.touches[0].clientX);
+window.addEventListener("mousemove", e => handleInput(e.clientX));
+window.addEventListener("touchmove", e => {
+    handleInput(e.touches[0].clientX);
 }, {passive:false});
 
 </script>
