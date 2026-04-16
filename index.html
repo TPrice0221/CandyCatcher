@@ -13,7 +13,6 @@
 
         body {
             margin: 0;
-            /* Sugar Rush inspired gradient */
             background: radial-gradient(circle, #ff99cc 0%, #ff66b2 100%);
             color: #4a0026;
             font-family: 'Arial Rounded MT Bold', 'Helvetica', sans-serif;
@@ -50,6 +49,9 @@
             border-radius: 50px;
             font-size: 20px;
             box-shadow: 0 4px 0 var(--candy-pink);
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         #prize-modal, #miss-modal {
@@ -65,8 +67,6 @@
         }
 
         #miss-modal { border-color: #5d4037; box-shadow: 0 20px 0 #3e2723; }
-        #miss-modal h2 { color: #5d4037; }
-
         .code { font-size: 40px; color: var(--candy-pink); margin: 20px 0; font-weight: bold; }
 
         button {
@@ -80,14 +80,13 @@
             box-shadow: 0 5px 0 #d63384;
             transition: transform 0.1s;
         }
-
-        button:active { transform: translateY(3px); box-shadow: 0 2px 0 #d63384; }
     </style>
 </head>
 <body>
 
 <div id="game-ui">
-    <div class="stat-box">🍬 SWEETS: <span id="score">0</span></div>
+    <div class="stat-box">🍬 SCORE: <span id="score">0</span></div>
+    <div class="stat-box">🥣 BOWL: <span id="bowl-count">0</span></div>
     <div class="stat-box">TARGET: 1000</div>
 </div>
 
@@ -100,7 +99,7 @@
 
 <div id="miss-modal">
     <h2>🍄 GLITCHED OUT</h2>
-    <p>You missed a sweet or hit a rotten one!</p>
+    <p id="fail-msg">You missed a sweet!</p>
     <button onclick="location.reload()">RETRY</button>
 </div>
 
@@ -114,17 +113,27 @@ canvas.height = 600;
 
 let score = 0;
 let gameActive = true;
-let bowl = { x: 350, y: 520, w: 120, h: 60 };
+let bowl = { x: 350, y: 520, w: 140, h: 70 };
 let candies = [];
-let collectedCandy = []; // VISUAL bowl fill
+let collectedCandy = []; 
 let particles = [];
+let floatingTexts = [];
 
 let spawnRate = 700;
 let difficultyTimer = 0;
 
 const candyTypes = ['🍬', '🍭', '🧁', '🍩', '🍫', '🍦'];
-const rottenTypes = ['☠️', '🧪', '💀'];
+const rottenTypes = ['☠️', '🧪', '💀', '🍄'];
+const trashTalk = [
+    "EYES OPEN, SUGAR-BRAIN!",
+    "THAT'S LITERALLY POISON!",
+    "MOLDY MANIA!",
+    "ENJOY THE DENTIST BILL!",
+    "STAY IN YOUR LANE!",
+    "TOTAL ROOKIE MOVE!"
+];
 
+// Background Sprinkles
 for(let i=0; i<50; i++) {
     particles.push({
         x: Math.random() * canvas.width,
@@ -149,36 +158,51 @@ function spawnCandy() {
             ? rottenTypes[Math.floor(Math.random() * rottenTypes.length)]
             : candyTypes[Math.floor(Math.random() * candyTypes.length)],
         speed: 3 + Math.random() * 3 + difficultyFactor * 3,
-        size: isRotten ? 40 : 30 + Math.random() * 10
+        size: isRotten ? 45 : 30 + Math.random() * 10
     });
 
     setTimeout(spawnCandy, spawnRate);
 }
 
+function addFloatingText(text, x, y, color = "#ff69b4") {
+    floatingTexts.push({
+        text: text,
+        x: x,
+        y: y,
+        opacity: 1,
+        color: color
+    });
+}
+
 function drawBowl(x, y, w, h) {
     ctx.save();
-
+    // Dish shadow
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = 'rgba(0,0,0,0.1)';
+    
+    // Dish Body
     ctx.fillStyle = '#fff';
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.quadraticCurveTo(x + w/2, y + h, x + w, y);
-    ctx.lineTo(x + w - 10, y - 10);
-    ctx.lineTo(x + 10, y - 10);
+    ctx.lineTo(x + w - 15, y - 10);
+    ctx.lineTo(x + 15, y - 10);
     ctx.closePath();
     ctx.fill();
 
     ctx.strokeStyle = '#ff69b4';
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 6;
     ctx.stroke();
 
-    // DRAW CANDY INSIDE BOWL
+    // DRAW CANDY PILE INSIDE BOWL
     collectedCandy.forEach((c, i) => {
-        ctx.font = "18px Arial";
-        let offsetX = (i % 6) * 18;
-        let offsetY = Math.floor(i / 6) * 18;
-        ctx.fillText(c, x + 15 + offsetX, y - 5 - offsetY);
+        ctx.font = "24px Arial";
+        // Grid layout inside bowl
+        let cols = 5;
+        let offsetX = (i % cols) * 22;
+        let offsetY = Math.floor(i / cols) * 20;
+        ctx.fillText(c, x + 25 + offsetX, y - 5 - offsetY);
     });
-
     ctx.restore();
 }
 
@@ -186,10 +210,10 @@ function draw() {
     if (!gameActive) return;
 
     difficultyTimer += 16;
-
     ctx.fillStyle = '#ffe6f2';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // Sprinkles
     particles.forEach(p => {
         ctx.fillStyle = p.color;
         ctx.beginPath();
@@ -201,50 +225,68 @@ function draw() {
 
     drawBowl(bowl.x, bowl.y, bowl.w, bowl.h);
 
+    // Candies
     candies.forEach((c, i) => {
         c.y += c.speed;
         ctx.font = `${c.size}px Arial`;
         ctx.textAlign = "center";
         ctx.fillText(c.icon, c.x, c.y);
 
+        // Catching mechanics
         if (c.y > bowl.y - 20 && c.y < bowl.y + bowl.h &&
             c.x > bowl.x && c.x < bowl.x + bowl.w) {
             
             if (c.type === 'rotten') {
-                // 🔥 PUNISHMENT
-                collectedCandy = [];
-                score = Math.floor(score * 0.5);
-
-                // visual flash
-                canvas.style.boxShadow = "0 0 30px red";
-                setTimeout(() => canvas.style.boxShadow = "", 200);
-
+                // TRASH TALK & PUNISHMENT
+                let insult = trashTalk[Math.floor(Math.random() * trashTalk.length)];
+                addFloatingText(insult, bowl.x + bowl.w/2, bowl.y - 50, "#8b0000");
+                
+                // Bowl explodes visually
+                collectedCandy = []; 
+                score = Math.max(0, score - 150);
+                
+                canvas.style.backgroundColor = "rgba(255,0,0,0.2)";
+                setTimeout(() => canvas.style.backgroundColor = "", 150);
             } else {
+                // SUCCESS
                 score += 20;
                 collectedCandy.push(c.icon);
-
-                // cap visual overflow
-                if (collectedCandy.length > 30) collectedCandy.shift();
+                addFloatingText("+20", c.x, c.y - 20);
+                
+                if (collectedCandy.length > 25) collectedCandy.shift();
             }
-
             candies.splice(i, 1);
         }
 
+        // Missed candy
         if (c.y > canvas.height) {
-            if (c.type === 'good') endGame('miss-modal');
+            if (c.type === 'good') {
+                document.getElementById('fail-msg').innerText = "A sweet hit the floor! Amateur!";
+                endGame('miss-modal');
+            }
             candies.splice(i, 1);
         }
     });
 
-    // difficulty ramp
-    if (difficultyTimer % 3000 < 16 && spawnRate > 350) {
-        spawnRate -= 30;
-    }
+    // Animate Floating Text
+    floatingTexts.forEach((ft, i) => {
+        ctx.save();
+        ctx.globalAlpha = ft.opacity;
+        ctx.fillStyle = ft.color;
+        ctx.font = "bold 24px Arial";
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ft.y -= 2;
+        ft.opacity -= 0.02;
+        if(ft.opacity <= 0) floatingTexts.splice(i, 1);
+        ctx.restore();
+    });
 
+    // Updates
+    if (difficultyTimer % 3000 < 16 && spawnRate > 300) spawnRate -= 25;
     document.getElementById('score').innerText = score;
+    document.getElementById('bowl-count').innerText = collectedCandy.length;
 
     if (score >= 1000) endGame('prize-modal');
-
     requestAnimationFrame(draw);
 }
 
