@@ -116,12 +116,15 @@ let score = 0;
 let gameActive = true;
 let bowl = { x: 350, y: 520, w: 120, h: 60 };
 let candies = [];
-let particles = []; // For "Sugar Rush" backdrop
+let collectedCandy = []; // VISUAL bowl fill
+let particles = [];
+
+let spawnRate = 700;
+let difficultyTimer = 0;
 
 const candyTypes = ['🍬', '🍭', '🧁', '🍩', '🍫', '🍦'];
-const rottenType = '🍄🍭'; // Looks like a poisonous/moldy treat
+const rottenTypes = ['☠️', '🧪', '💀'];
 
-// Create background sprinkles
 for(let i=0; i<50; i++) {
     particles.push({
         x: Math.random() * canvas.width,
@@ -134,25 +137,27 @@ for(let i=0; i<50; i++) {
 
 function spawnCandy() {
     if (!gameActive) return;
-    let isRotten = Math.random() < 0.2;
+
+    let difficultyFactor = Math.min(0.35, difficultyTimer / 20000);
+    let isRotten = Math.random() < (0.15 + difficultyFactor);
+
     candies.push({
         x: Math.random() * (canvas.width - 60) + 30,
         y: -50,
         type: isRotten ? 'rotten' : 'good',
-        icon: isRotten ? rottenType : candyTypes[Math.floor(Math.random() * candyTypes.length)],
-        speed: 3 + Math.random() * 4,
-        size: 35
+        icon: isRotten 
+            ? rottenTypes[Math.floor(Math.random() * rottenTypes.length)]
+            : candyTypes[Math.floor(Math.random() * candyTypes.length)],
+        speed: 3 + Math.random() * 3 + difficultyFactor * 3,
+        size: isRotten ? 40 : 30 + Math.random() * 10
     });
-    setTimeout(spawnCandy, 600);
+
+    setTimeout(spawnCandy, spawnRate);
 }
 
 function drawBowl(x, y, w, h) {
     ctx.save();
-    // Shadow
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = 'rgba(0,0,0,0.1)';
-    
-    // Dish Body
+
     ctx.fillStyle = '#fff';
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -161,22 +166,30 @@ function drawBowl(x, y, w, h) {
     ctx.lineTo(x + 10, y - 10);
     ctx.closePath();
     ctx.fill();
-    
-    // Trim
+
     ctx.strokeStyle = '#ff69b4';
     ctx.lineWidth = 5;
     ctx.stroke();
+
+    // DRAW CANDY INSIDE BOWL
+    collectedCandy.forEach((c, i) => {
+        ctx.font = "18px Arial";
+        let offsetX = (i % 6) * 18;
+        let offsetY = Math.floor(i / 6) * 18;
+        ctx.fillText(c, x + 15 + offsetX, y - 5 - offsetY);
+    });
+
     ctx.restore();
 }
 
 function draw() {
     if (!gameActive) return;
 
-    // Clear and draw backdrop
+    difficultyTimer += 16;
+
     ctx.fillStyle = '#ffe6f2';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Move sprinkles
+
     particles.forEach(p => {
         ctx.fillStyle = p.color;
         ctx.beginPath();
@@ -194,16 +207,27 @@ function draw() {
         ctx.textAlign = "center";
         ctx.fillText(c.icon, c.x, c.y);
 
-        // Collision logic
         if (c.y > bowl.y - 20 && c.y < bowl.y + bowl.h &&
             c.x > bowl.x && c.x < bowl.x + bowl.w) {
             
             if (c.type === 'rotten') {
-                endGame('miss-modal');
+                // 🔥 PUNISHMENT
+                collectedCandy = [];
+                score = Math.floor(score * 0.5);
+
+                // visual flash
+                canvas.style.boxShadow = "0 0 30px red";
+                setTimeout(() => canvas.style.boxShadow = "", 200);
+
             } else {
                 score += 20;
-                candies.splice(i, 1);
+                collectedCandy.push(c.icon);
+
+                // cap visual overflow
+                if (collectedCandy.length > 30) collectedCandy.shift();
             }
+
+            candies.splice(i, 1);
         }
 
         if (c.y > canvas.height) {
@@ -212,7 +236,13 @@ function draw() {
         }
     });
 
+    // difficulty ramp
+    if (difficultyTimer % 3000 < 16 && spawnRate > 350) {
+        spawnRate -= 30;
+    }
+
     document.getElementById('score').innerText = score;
+
     if (score >= 1000) endGame('prize-modal');
 
     requestAnimationFrame(draw);
