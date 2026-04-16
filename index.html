@@ -3,258 +3,240 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sugar Popz: Rhythm Catch</title>
-
+    <title>Sugar Popz: Sugar Rush Edition</title>
     <style>
-        :root { --neon-pink: #ff007f; --neon-cyan: #00ffcc; }
+        :root { 
+            --candy-pink: #ff69b4; 
+            --sugar-white: #fff5f8;
+            --mint-green: #00ffcc;
+        }
 
         body {
             margin: 0;
-            background: #0a0a0a;
-            color: white;
-            font-family: 'Courier New', Courier, monospace;
+            /* Sugar Rush inspired gradient */
+            background: radial-gradient(circle, #ff99cc 0%, #ff66b2 100%);
+            color: #4a0026;
+            font-family: 'Arial Rounded MT Bold', 'Helvetica', sans-serif;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
-
-            touch-action: none; /* MOBILE FIX */
+            touch-action: none;
         }
 
         canvas {
-            background: #111;
-            border: 3px solid var(--neon-pink);
-            border-radius: 15px;
+            background: linear-gradient(to bottom, #ffe6f2 0%, #ffb3d9 100%);
+            border: 8px solid white;
+            border-radius: 30px;
             cursor: crosshair;
-            box-shadow: 0 0 30px rgba(255, 0, 127, 0.3);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
         }
 
-        /* UI */
         #game-ui {
             position: absolute;
-            top: 10px;
-            width: 400px;
+            top: 20px;
+            width: 760px;
             display: flex;
             justify-content: space-between;
-            padding: 0 20px;
-            box-sizing: border-box;
             pointer-events: none;
         }
 
         .stat-box {
-            background: rgba(0,0,0,0.7);
-            border: 1px solid var(--neon-cyan);
-            padding: 5px 15px;
-            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 4px solid var(--candy-pink);
+            padding: 10px 25px;
+            border-radius: 50px;
+            font-size: 20px;
+            box-shadow: 0 4px 0 var(--candy-pink);
         }
 
-        /* WIN MODAL */
-        #prize-modal {
+        #prize-modal, #miss-modal {
             position: absolute;
             display: none;
-            background: rgba(0,0,0,0.95);
-            border: 5px solid var(--neon-cyan);
+            background: white;
+            border: 10px solid var(--candy-pink);
             padding: 40px;
             text-align: center;
             z-index: 100;
-            border-radius: 20px;
-            box-shadow: 0 0 50px var(--neon-cyan);
+            border-radius: 40px;
+            box-shadow: 0 20px 0 #d63384;
         }
 
-        .code {
-            font-size: 32px;
-            color: var(--neon-cyan);
-            letter-spacing: 5px;
-            margin: 20px 0;
-            font-weight: bold;
-        }
+        #miss-modal { border-color: #5d4037; box-shadow: 0 20px 0 #3e2723; }
+        #miss-modal h2 { color: #5d4037; }
 
-        /* MISS MODAL (NEW) */
-        #miss-modal {
-            position: absolute;
-            display: none;
-            background: rgba(0,0,0,0.95);
-            border: 5px solid red;
-            padding: 30px;
-            text-align: center;
-            z-index: 100;
-            border-radius: 20px;
-            box-shadow: 0 0 40px red;
-        }
-
-        #miss-modal h2 {
-            color: red;
-            margin-bottom: 10px;
-        }
+        .code { font-size: 40px; color: var(--candy-pink); margin: 20px 0; font-weight: bold; }
 
         button {
-            background: var(--neon-pink);
+            background: var(--candy-pink);
             border: none;
             color: white;
-            padding: 10px 20px;
+            padding: 15px 30px;
+            border-radius: 20px;
+            font-size: 18px;
             cursor: pointer;
-            font-weight: bold;
-            text-transform: uppercase;
+            box-shadow: 0 5px 0 #d63384;
+            transition: transform 0.1s;
         }
+
+        button:active { transform: translateY(3px); box-shadow: 0 2px 0 #d63384; }
     </style>
 </head>
-
 <body>
 
 <div id="game-ui">
-    <div class="stat-box">BEAT: <span id="streak">100</span>%</div>
-    <div class="stat-box">SCORE: <span id="score">0</span></div>
+    <div class="stat-box">🍬 SWEETS: <span id="score">0</span></div>
+    <div class="stat-box">TARGET: 1000</div>
 </div>
 
-<!-- WIN -->
 <div id="prize-modal">
-    <h1>🏆 PERFECT RUN!</h1>
-    <p>You caught every beat. Here is your reward:</p>
+    <h1>👑 CANDY KING!</h1>
+    <p>You dominated the Sugar Rush!</p>
     <div class="code">SUGARPOPZ10</div>
-    <p>10% OFF AT THE STORE</p>
-    <button onclick="location.reload()">PLAY AGAIN</button>
+    <button onclick="location.reload()">RE-RACE</button>
 </div>
 
-<!-- MISS (NEW) -->
 <div id="miss-modal">
-    <h2>💀 YOU MISSED</h2>
-    <p>The beat dropped... and so did you.</p>
-    <button onclick="location.reload()">TRY AGAIN</button>
+    <h2>🍄 GLITCHED OUT</h2>
+    <p>You missed a sweet or hit a rotten one!</p>
+    <button onclick="location.reload()">RETRY</button>
 </div>
 
 <canvas id="gameCanvas"></canvas>
-<p style="margin-top: 15px; font-size: 12px; color: #666;">
-    DRAG TO MOVE • DON'T MISS A SINGLE CANDY
-</p>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-canvas.width = 400;
+canvas.width = 800;
 canvas.height = 600;
 
 let score = 0;
 let gameActive = true;
-
-let bowl = { x: 160, y: 540, w: 80, h: 20 };
+let bowl = { x: 350, y: 520, w: 120, h: 60 };
 let candies = [];
+let particles = []; // For "Sugar Rush" backdrop
 
-/* AUDIO (unchanged) */
-const AudioCtx = window.AudioContext || window.webkitAudioContext;
-let audioCtx;
-let analyser;
+const candyTypes = ['🍬', '🍭', '🧁', '🍩', '🍫', '🍦'];
+const rottenType = '🍄🍭'; // Looks like a poisonous/moldy treat
 
-function initAudio() {
-    if (audioCtx) return;
-    audioCtx = new AudioCtx();
-    analyser = audioCtx.createAnalyser();
+// Create background sprinkles
+for(let i=0; i<50; i++) {
+    particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 5 + 2,
+        speed: Math.random() * 2 + 1,
+        color: ['#fff', '#ff99cc', '#00ffcc'][Math.floor(Math.random() * 3)]
+    });
 }
 
-/* GAME LOGIC */
 function spawnCandy() {
     if (!gameActive) return;
-
-    let isRotten = Math.random() < 0.15;
-
+    let isRotten = Math.random() < 0.2;
     candies.push({
-        x: Math.random() * (canvas.width - 40) + 20,
+        x: Math.random() * (canvas.width - 60) + 30,
         y: -50,
         type: isRotten ? 'rotten' : 'good',
-        speed: 4 + Math.random() * 3,
-        size: 25
+        icon: isRotten ? rottenType : candyTypes[Math.floor(Math.random() * candyTypes.length)],
+        speed: 3 + Math.random() * 4,
+        size: 35
     });
+    setTimeout(spawnCandy, 600);
+}
 
-    setTimeout(spawnCandy, 800);
+function drawBowl(x, y, w, h) {
+    ctx.save();
+    // Shadow
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = 'rgba(0,0,0,0.1)';
+    
+    // Dish Body
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + w/2, y + h, x + w, y);
+    ctx.lineTo(x + w - 10, y - 10);
+    ctx.lineTo(x + 10, y - 10);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Trim
+    ctx.strokeStyle = '#ff69b4';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.restore();
 }
 
 function draw() {
     if (!gameActive) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Clear and draw backdrop
+    ctx.fillStyle = '#ffe6f2';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Move sprinkles
+    particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        p.y += p.speed;
+        if(p.y > canvas.height) p.y = -10;
+    });
 
-    /* DRAW BOWL */
-    ctx.fillStyle = getColor('--neon-cyan');
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = getColor('--neon-cyan');
-    ctx.fillRect(bowl.x, bowl.y, bowl.w, bowl.h);
-    ctx.shadowBlur = 0;
+    drawBowl(bowl.x, bowl.y, bowl.w, bowl.h);
 
     candies.forEach((c, i) => {
         c.y += c.speed;
-
-        /* DRAW CANDY */
         ctx.font = `${c.size}px Arial`;
-        ctx.fillText(c.type === 'rotten' ? '🤢' : '🍬', c.x - 12, c.y);
+        ctx.textAlign = "center";
+        ctx.fillText(c.icon, c.x, c.y);
 
-        /* COLLISION */
-        if (c.y > bowl.y && c.y < bowl.y + bowl.h &&
+        // Collision logic
+        if (c.y > bowl.y - 20 && c.y < bowl.y + bowl.h &&
             c.x > bowl.x && c.x < bowl.x + bowl.w) {
-
+            
             if (c.type === 'rotten') {
-                score = 0;
-                document.body.style.backgroundColor = '#440000';
-                setTimeout(() => {
-                    document.body.style.backgroundColor = '#0a0a0a';
-                }, 100);
+                endGame('miss-modal');
             } else {
-                score += 10;
+                score += 20;
+                candies.splice(i, 1);
             }
-
-            candies.splice(i, 1);
         }
 
-        /* MISS CONDITION */
         if (c.y > canvas.height) {
-            if (c.type === 'good') {
-                gameActive = false;
-                document.getElementById('miss-modal').style.display = 'block';
-            }
+            if (c.type === 'good') endGame('miss-modal');
             candies.splice(i, 1);
         }
     });
 
     document.getElementById('score').innerText = score;
-
-    /* WIN */
-    if (score >= 500) {
-        gameActive = false;
-        document.getElementById('prize-modal').style.display = 'block';
-    }
+    if (score >= 1000) endGame('prize-modal');
 
     requestAnimationFrame(draw);
 }
 
-function getColor(name) {
-    return getComputedStyle(document.documentElement).getPropertyValue(name);
+function endGame(modalId) {
+    gameActive = false;
+    document.getElementById(modalId).style.display = 'block';
 }
 
-/* MOVEMENT (MOUSE + TOUCH) */
 function moveBowl(clientX) {
     let rect = canvas.getBoundingClientRect();
     bowl.x = (clientX - rect.left) - bowl.w / 2;
-
-    // clamp inside screen
     bowl.x = Math.max(0, Math.min(canvas.width - bowl.w, bowl.x));
 }
 
-canvas.addEventListener('mousemove', e => {
-    moveBowl(e.clientX);
-});
-
+canvas.addEventListener('mousemove', e => moveBowl(e.clientX));
 canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
     moveBowl(e.touches[0].clientX);
-});
+}, {passive: false});
 
-/* START AUDIO ON INTERACTION */
-canvas.addEventListener('mousedown', initAudio);
-canvas.addEventListener('touchstart', initAudio);
-
-/* START GAME */
 spawnCandy();
 draw();
 </script>
-
 </body>
 </html>
