@@ -8,13 +8,11 @@
 <style>
 :root { 
     --candy-pink: #ff69b4; 
-    --sugar-white: #fff5f8;
     --mint: #00ffcc;
 }
 
 body {
     margin: 0;
-    padding: 0;
     background: radial-gradient(circle, #ff99cc 0%, #ff66b2 100%);
     font-family: 'Arial Rounded MT Bold', 'Helvetica', sans-serif;
     overflow: hidden;
@@ -22,16 +20,15 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
-    width: 100vw;
 }
 
-/* 🍭 ADAPTIVE GAME CONTAINER */
 #game-container {
     position: relative;
-    height: 90vh; /* Takes up most of the screen height */
-    aspect-ratio: 3 / 4; /* Maintains arcade proportions */
+    /* The Sweet Spot Size */
+    width: 600px; 
     max-width: 95vw;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    height: 800px;
+    max-height: 85vh;
 }
 
 canvas {
@@ -39,76 +36,69 @@ canvas {
     width: 100%;
     height: 100%;
     background: linear-gradient(to bottom, #ffe6f2 0%, #ffb3d9 100%);
-    border: 10px solid white;
-    border-radius: 40px;
-    cursor: none; /* Hide cursor to use candy bowl instead */
+    border: 8px solid white;
+    border-radius: 30px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    cursor: none;
 }
 
-/* 🍬 UI ELEMENTS */
 #game-ui {
     position: absolute;
-    top: -50px;
+    top: -55px;
     width: 100%;
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
     pointer-events: none;
 }
 
 .stat-box {
     background: white;
     border: 3px solid var(--candy-pink);
-    padding: 5px 20px;
+    padding: 6px 18px;
     border-radius: 50px;
     color: #d63384;
     font-weight: bold;
-    font-size: clamp(14px, 2vw, 22px);
+    font-size: 18px;
     box-shadow: 0 4px 0 var(--candy-pink);
 }
 
-.overlay {
+.overlay, .modal {
     position: absolute;
     inset: 0;
-    background: rgba(255,105,180,0.92);
+    background: rgba(255,105,180,0.9);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     color: white;
     z-index: 100;
-    border-radius: 30px;
+    border-radius: 22px;
     text-align: center;
     padding: 20px;
 }
 
 .modal {
     display: none;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     background: white;
-    padding: 30px;
-    border-radius: 40px;
+    inset: 15% 10%;
+    height: auto;
     border: 8px solid var(--candy-pink);
-    text-align: center;
-    z-index: 200;
+    color: #d63384;
     box-shadow: 0 15px 0 #d63384;
-    width: 70%;
 }
 
-h1 { font-size: clamp(30px, 8vw, 60px); text-shadow: 3px 3px #d63384; margin: 0; }
 button {
-    margin-top: 20px;
     padding: 15px 30px;
     border: none;
     background: var(--mint);
     color: #4a0026;
-    font-size: clamp(18px, 4vw, 26px);
+    font-size: 22px;
     font-weight: bold;
     border-radius: 50px;
     cursor: pointer;
     box-shadow: 0 5px 0 #00ccaa;
 }
+
 button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
 
 .trash-talk {
@@ -117,14 +107,13 @@ button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
     font-weight: bold;
     color: #ff0000;
     text-shadow: 2px 2px white;
-    font-size: 28px;
-    z-index: 1000;
-    animation: floatUp 0.8s ease-out forwards;
+    font-size: 24px;
+    animation: floatUp 0.8s forwards;
 }
 
 @keyframes floatUp {
-    0% { transform: translateY(0) scale(1); opacity: 1; }
-    100% { transform: translateY(-120px) scale(1.5); opacity: 0; }
+    0% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(-80px); opacity: 0; }
 }
 </style>
 </head>
@@ -135,7 +124,6 @@ button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
     <div id="start-screen" class="overlay">
         <h1>SUGAR POPZ</h1>
         <p>Catch the sweets!</p>
-        <p style="font-size: 0.8em;">(Move mouse/finger anywhere on screen to move)</p>
         <button onclick="startGame()">START RACE</button>
     </div>
 
@@ -148,11 +136,11 @@ button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
     <div id="game-over" class="modal">
         <h2>GLITCHED!</h2>
         <p>A sweet treat hit the street!</p>
-        <button onclick="location.reload()">TRY AGAIN</button>
+        <button onclick="location.reload()">RE-RACE</button>
     </div>
 
     <div id="level-up" class="modal">
-        <h2>SWEET VICTORY!</h2>
+        <h2>SWEET!</h2>
         <button onclick="nextLevel()">NEXT ROUND</button>
     </div>
 
@@ -163,12 +151,12 @@ button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// High internal resolution for crisp graphics
-canvas.width = 1000;
-canvas.height = 1400;
+// Internal resolution for crispness
+canvas.width = 800;
+canvas.height = 1000;
 
 let gameActive = false;
-let bowl = { x: 400, y: 1250, w: 200, h: 80 };
+let bowl = { x: 325, y: 880, w: 150, h: 65 };
 let candies = [];
 let collected = [];
 let particles = [];
@@ -176,11 +164,10 @@ let score = 0;
 let level = 1;
 let targetScore = 500;
 
-const candyTypes = ['🍬','🍭','🍩','🍫','🧁','🍦','🍪','🥨','🍰'];
-const rottenTypes = ['☠️','💀','🧪', '🍄', '💩'];
-const insults = ["LOSER!", "TOO SLOW!", "MOLDY!", "YUCK!", "GLITCH!"];
+const candyTypes = ['🍬','🍭','🍩','🍫','🧁','🍦','🍪'];
+const rottenTypes = ['☠️','💀','🍄', '💩'];
 
-// 🎹 AUDIO
+// AUDIO
 let audioCtx;
 function playTick(freq, dur) {
     try {
@@ -197,14 +184,14 @@ function playTick(freq, dur) {
     } catch(e) {}
 }
 
-// BACKDROP
-for (let i = 0; i < 80; i++) {
+// BACKDROP SPRINKLES
+for (let i = 0; i < 60; i++) {
     particles.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        size: Math.random() * 6 + 2,
-        speed: Math.random() * 3 + 1,
-        color: ['#fff', '#ff99cc', '#00ffcc', '#ffff99'][Math.floor(Math.random()*4)]
+        size: Math.random() * 5 + 2,
+        speed: Math.random() * 2 + 1,
+        color: ['#fff', '#ff99cc', '#00ffcc'][Math.floor(Math.random()*3)]
     });
 }
 
@@ -212,28 +199,28 @@ function spawnCandy() {
     if (!gameActive) return;
     let isRotten = Math.random() < (0.12 + level * 0.03);
     candies.push({
-        x: Math.random() * (canvas.width - 150) + 75,
-        y: -100,
+        x: Math.random() * (canvas.width - 100) + 50,
+        y: -50,
         icon: isRotten ? rottenTypes[Math.floor(Math.random()*rottenTypes.length)] : candyTypes[Math.floor(Math.random()*candyTypes.length)],
         type: isRotten ? "bad" : "good",
-        speed: 4 + level + (Math.random() * 3),
-        size: isRotten ? 70 : 50 + Math.random() * 20
+        speed: 4 + level + (Math.random() * 2),
+        size: isRotten ? 60 : 40 + Math.random() * 15
     });
-    setTimeout(spawnCandy, Math.max(200, 1000 - level * 100));
+    setTimeout(spawnCandy, Math.max(250, 900 - level * 80));
 }
 
 function startGame() {
     document.getElementById("start-screen").style.display = "none";
     gameActive = true;
     spawnCandy();
-    requestAnimationFrame(draw);
-    setInterval(() => { if(gameActive) playTick(80 + (level * 10), 0.1); }, 500);
+    draw();
+    setInterval(() => { if(gameActive) playTick(100 + (level * 10), 0.1); }, 600);
 }
 
 function nextLevel() {
     document.getElementById("level-up").style.display = "none";
     level++;
-    targetScore += 600;
+    targetScore += 500;
     candies = [];
     collected = [];
     gameActive = true;
@@ -244,12 +231,9 @@ function showTrashTalk(text, x, y) {
     const el = document.createElement('div');
     el.className = 'trash-talk';
     el.innerText = text;
-    // Map canvas coordinates to screen coordinates
     const rect = canvas.getBoundingClientRect();
-    const screenX = (x / canvas.width) * rect.width + rect.left;
-    const screenY = (y / canvas.height) * rect.height + rect.top;
-    el.style.left = screenX + 'px';
-    el.style.top = screenY + 'px';
+    el.style.left = (x / canvas.width * rect.width + rect.left) + 'px';
+    el.style.top = (y / canvas.height * rect.height + rect.top) + 'px';
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 800);
 }
@@ -271,22 +255,20 @@ function draw() {
         ctx.save();
         ctx.fillStyle = "white";
         ctx.strokeStyle = "var(--candy-pink)";
-        ctx.lineWidth = 12;
+        ctx.lineWidth = 8;
         ctx.beginPath();
-        ctx.roundRect(bowl.x, bowl.y, bowl.w, bowl.h, [0, 0, 60, 60]);
+        ctx.roundRect(bowl.x, bowl.y, bowl.w, bowl.h, [0, 0, 40, 40]);
         ctx.fill();
         ctx.stroke();
 
-        // Candy in bowl
-        collected.slice(-30).forEach((c,i)=>{
-            ctx.font = "35px Arial";
-            let row = Math.floor(i / 6);
-            let col = i % 6;
-            ctx.fillText(c, bowl.x + 20 + (col * 30), bowl.y + 25 + (row * 20));
+        // Candy pile
+        collected.slice(-18).forEach((c,i)=>{
+            ctx.font = "24px Arial";
+            ctx.fillText(c, bowl.x + 15 + (i%6 * 22), bowl.y + 20 + (Math.floor(i/6) * 15));
         });
         ctx.restore();
 
-        // Falling items
+        // Items
         for (let i = candies.length - 1; i >= 0; i--) {
             let c = candies[i];
             c.y += c.speed;
@@ -297,13 +279,13 @@ function draw() {
             if (c.y > bowl.y && c.y < bowl.y + bowl.h && c.x > bowl.x && c.x < bowl.x + bowl.w) {
                 if (c.type === "bad") {
                     collected = [];
-                    score = Math.max(0, score - 200);
-                    showTrashTalk(insults[Math.floor(Math.random()*insults.length)], c.x, c.y);
-                    playTick(40, 0.4);
+                    score = Math.max(0, score - 100);
+                    showTrashTalk("YUCK!", c.x, c.y);
+                    playTick(60, 0.3);
                 } else {
                     collected.push(c.icon);
                     score += 25;
-                    playTick(300 + (level*40), 0.05);
+                    playTick(350, 0.05);
                 }
                 candies.splice(i, 1);
                 continue;
@@ -331,14 +313,10 @@ function draw() {
     requestAnimationFrame(draw);
 }
 
-// 🖱 GLOBAL CONTROLS: Listen on window, not just canvas
+// SMOOTH INPUT (Anywhere on window)
 const handleInput = (clientX) => {
     let rect = canvas.getBoundingClientRect();
-    // Calculate relative X position regardless of where the mouse/finger is on the screen
-    let scaleX = canvas.width / rect.width;
-    let targetX = (clientX - rect.left) * scaleX - bowl.w/2;
-    
-    // Smooth boundaries
+    let targetX = (clientX - rect.left) * (canvas.width / rect.width) - bowl.w/2;
     bowl.x = Math.max(0, Math.min(canvas.width - bowl.w, targetX));
 };
 
