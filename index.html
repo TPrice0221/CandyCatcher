@@ -202,23 +202,37 @@
         livesDisplay.innerText = lives > 0 ? "💗".repeat(lives) : "💔"; 
     }
 
-    function playMusic() {
-        let trackNumber = Math.min(level, 3); 
-        let trackName = `beat${trackNumber}.mp3`;
-        if (!currentAudio.src.includes(trackName)) {
-            currentAudio.src = trackName;
-            currentAudio.load();
-            currentAudio.play().catch(e => console.log("Music play blocked"));
+function playMusic() {
+    let trackNumber = Math.min(level, 3);
+    let trackName = `beat${trackNumber}.mp3`;
+
+    if (!currentAudio.src.includes(trackName)) {
+        currentAudio.pause();
+        currentAudio = new Audio(trackName);
+        currentAudio.loop = true;
+        currentAudio.volume = 0.5;
+
+        // FORCE play inside user interaction chain
+        let playPromise = currentAudio.play();
+
+        if (playPromise !== undefined) {
+            playPromise.catch(() => {
+                // Try again after slight delay (mobile fix)
+                setTimeout(() => {
+                    currentAudio.play().catch(() => {});
+                }, 300);
+            });
         }
     }
+}
 
     function bootGame() {
+        playMusic();
         overlay.style.display = "none";
         gameActive = true;
         score = 0; level = 1; lives = 3;
         candies = []; collected = [];
         updateLivesDisplay();
-        playMusic();
         spawn();
         requestAnimationFrame(loop);
     }
