@@ -159,6 +159,7 @@ const ctx = canvas.getContext("2d");
 canvas.width = 900;
 canvas.height = 700;
 
+// 1. STATE & CONSTANTS
 let gameActive = false;
 let bowl = { x: 400, y: 620, w: 160, h: 65 };
 let candies = [];
@@ -167,108 +168,97 @@ let particles = [];
 let score = 0;
 let level = 1;
 let targetScore = 500;
-    let bpm = [140, 150, 160]; // match your beats
-let currentBPM = bpm[currentBeatIndex];
-
-let nextSpawn = (60 / currentBPM) * 1000;
 
 const candyTypes = ['🍬','🍭','🍩','🍫','🧁','🍦','🍪','🥨','🍮','🍰'];
 const rottenTypes = ['☠️','💀','🧪', '🍄', '💩'];
 const insults = ["LOSER!", "TOO SLOW!", "MOLDY!", "YUCK!", "GLITCH!", "RUDE!"];
 
-// 🎹 AUDIO ENGINE
-// 🎧 REAL AUDIO SYSTEM
-let audio = new Audio();
+// 2. AUDIO SETUP (Fixed Order)
 let currentBeatIndex = 0;
+const beats = ["beat1.mp3", "beat2.mp3", "beat3.mp3"];
+const bpm = [140, 150, 160]; 
+const audio = new Audio(); // Persistent audio object
+audio.loop = true;
 
-const beats = [
-    "beat1.mp3",
-    "beat2.mp3",
-    "beat3.mp3"
-];
+// Helper for procedural sound effects
+let audioCtx;
+function playTick(freq, dur) {
+    try {
+        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
+        osc.start();
+        osc.stop(audioCtx.currentTime + dur);
+    } catch(e) {}
+}
 
 function playBeat(index) {
-    audio.pause();
-    audio = new Audio(beats[index]);
-    audio.loop = true;
+    audio.src = beats[index % beats.length];
     audio.volume = 0.8;
-    audio.play();
+    audio.play().catch(e => console.log("Audio waiting for interaction"));
 }
 
-// SPRINKLE BACKDROP
-for (let i = 0; i < 70; i++) {
-    particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        size: Math.random() * 5 + 2,
-        speed: Math.random() * 2 + 1,
-        color: ['#fff', '#ff99cc', '#00ffcc', '#ffff99'][Math.floor(Math.random()*4)]
-    });
-}
-
+// 3. GAME LOGIC
 function spawnCandy() {
-    if (!gameActive) return; // Stop spawning if game is paused/level over
+    if (!gameActive) return;
 
     let isRotten = Math.random() < (0.12 + level * 0.03);
     candies.push({
         x: Math.random() * (canvas.width - 100) + 50,
         y: -50,
-        icon: isRotten 
-            ? rottenTypes[Math.floor(Math.random()*rottenTypes.length)]
-            : candyTypes[Math.floor(Math.random()*candyTypes.length)],
+        icon: isRotten ? rottenTypes[Math.floor(Math.random()*rottenTypes.length)] : candyTypes[Math.floor(Math.random()*candyTypes.length)],
         type: isRotten ? "bad" : "good",
         speed: 2 + level + (Math.random() * 1.5),
         size: isRotten ? 55 : 35 + Math.random() * 15
     });
 
-    // Recursively call spawnCandy based on level speed
-    let nextSpawn = Math.max(200, 1000 - level * 100);
+    // Calculate spawn rate based on current BPM
+    let currentBPM = bpm[currentBeatIndex % bpm.length];
+    let nextSpawn = (60 / currentBPM) * 1000; 
     setTimeout(spawnCandy, nextSpawn);
 }
 
 function startGame() {
     document.getElementById("start-screen").style.display = "none";
     gameActive = true;
-    spawnCandy(); // Trigger the spawn loop
-    requestAnimationFrame(draw);
+    currentBeatIndex = 0;
     playBeat(currentBeatIndex);
-    
-    // Background beat loop
-    setInterval(() => { 
-        if(gameActive) playTick(80 + (level * 10), 0.1); 
-    }, 500);
+    spawnCandy();
+    requestAnimationFrame(draw);
 }
 
 function nextLevel() {
     document.getElementById("level-up").style.display = "none";
     level++;
     targetScore += 500;
-    candies = []; // Clear current falling ones
-    collected = []; // Clear bowl visuals
+    candies = [];
+    collected = [];
     gameActive = true;
+    
     currentBeatIndex++;
-if (currentBeatIndex >= beats.length) {
-    currentBeatIndex = 0; // loop beats if you run out
+    playBeat(currentBeatIndex);
+    spawnCandy();
 }
 
-playBeat(currentBeatIndex);
-    spawnCandy(); // RE-START the spawn loop for the new level
-}
-
-function showTrashTalk(text, x, y) {
-    const el = document.createElement('div');
-    el.className = 'trash-talk';
-    el.innerText = text;
-    el.style.left = (x + canvas.offsetLeft - 50) + 'px';
-    el.style.top = (y + canvas.offsetTop) + 'px';
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 1000);
+// 4. RENDERING ENGINE
+for (let i = 0; i < 70; i++) {
+    particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 5 + 2,
+        speed: Math.random() * 1 + 0.5,
+        color: ['#fff', '#ff99cc', '#00ffcc', '#ffff99'][Math.floor(Math.random()*4)]
+    });
 }
 
 function draw() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    // Background Particles
     particles.forEach(p => {
         ctx.fillStyle = p.color;
         ctx.beginPath();
@@ -289,7 +279,6 @@ function draw() {
         ctx.fill();
         ctx.stroke();
 
-        // Candy in Bowl Visual
         collected.slice(-24).forEach((c,i)=>{
             ctx.font = "24px Arial";
             let row = Math.floor(i / 6);
@@ -298,16 +287,13 @@ function draw() {
         });
         ctx.restore();
 
-        // Falling items
         for (let i = candies.length - 1; i >= 0; i--) {
             let c = candies[i];
             c.y += c.speed;
-            
             ctx.font = c.size + "px Arial";
             ctx.textAlign = "center";
             ctx.fillText(c.icon, c.x, c.y);
 
-            // Catch check
             if (c.y > bowl.y && c.y < bowl.y + bowl.h && c.x > bowl.x && c.x < bowl.x + bowl.w) {
                 if (c.type === "bad") {
                     collected = [];
@@ -323,17 +309,16 @@ function draw() {
                 continue;
             }
 
-            // Miss check
             if (c.y > canvas.height) {
                 if (c.type === "good") {
                     gameActive = false;
+                    audio.pause(); // Stop music on lose
                     document.getElementById("game-over").style.display = "block";
                 }
                 candies.splice(i, 1);
             }
         }
 
-        // Win check
         if (score >= targetScore) {
             gameActive = false;
             document.getElementById("level-up").style.display = "block";
@@ -347,7 +332,16 @@ function draw() {
     requestAnimationFrame(draw);
 }
 
-// Smooth Controls
+function showTrashTalk(text, x, y) {
+    const el = document.createElement('div');
+    el.className = 'trash-talk';
+    el.innerText = text;
+    el.style.left = (x + canvas.offsetLeft - 50) + 'px';
+    el.style.top = (y + canvas.offsetTop) + 'px';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+}
+
 const updateBowlPos = (clientX) => {
     let rect = canvas.getBoundingClientRect();
     let targetX = clientX - rect.left - bowl.w/2;
@@ -359,7 +353,6 @@ canvas.addEventListener("touchmove", e => {
     e.preventDefault();
     updateBowlPos(e.touches[0].clientX);
 }, {passive:false});
-
 </script>
 </body>
 </html>
