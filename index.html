@@ -10,6 +10,7 @@
     --candy-pink: #ff69b4; 
     --sugar-white: #fff5f8;
     --mint: #00ffcc;
+    --bad-red: #ff3333;
 }
 
 body {
@@ -104,62 +105,46 @@ button {
 
 button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
 
-/* Visual Feedback Elements */
-.trash-talk {
-    position: absolute;
-    pointer-events: none;
-    font-weight: bold;
-    color: #ff0000;
-    text-shadow: 2px 2px white;
-    font-size: 24px;
-    z-index: 1000;
-    animation: floatUp 1s forwards;
-}
-
-.combo-popup {
+/* Visual Feedback Elements - Updated for Glow and Text-Only */
+.feedback-text {
     position: absolute;
     pointer-events: none;
     font-weight: 900;
-    color: var(--mint);
-    text-shadow: 2px 2px #d63384, -1px -1px 0 #fff;
     font-size: 32px;
     z-index: 1000;
-    animation: comboFloat 0.6s ease-out forwards;
-}
-
-.status-toast {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.85);
-    color: #ff3333;
-    padding: 15px 30px;
-    border-radius: 20px;
-    font-size: 28px;
-    font-weight: bold;
-    border: 4px solid #ff3333;
-    z-index: 2000;
-    animation: toastPop 1.5s forwards;
-    pointer-events: none;
     text-align: center;
+    width: 250px; /* Give text room to wrap if needed */
 }
 
-@keyframes floatUp {
-    0% { transform: translateY(0); opacity: 1; }
-    100% { transform: translateY(-100px); opacity: 0; }
+/* Green Glow for Good Candy */
+.good-feedback {
+    color: var(--mint);
+    text-shadow: 
+        0 0 10px rgba(0, 255, 204, 0.7),
+        0 0 20px rgba(0, 255, 204, 0.5),
+        2px 2px 2px #d63384; /* Keep a hint of pink shadow for depth */
+    animation: goodFloat 0.8s ease-out forwards;
 }
 
-@keyframes comboFloat {
-    0% { transform: translateY(0) scale(0.5); opacity: 1; }
-    100% { transform: translateY(-80px) scale(1.5); opacity: 0; }
+/* Red Glow for Bad Hits */
+.bad-feedback {
+    color: var(--bad-red);
+    text-shadow: 
+        0 0 10px rgba(255, 51, 51, 0.7),
+        0 0 20px rgba(255, 51, 51, 0.5),
+        2px 2px 2px #fff;
+    animation: badFloat 1s ease-out forwards;
 }
 
-@keyframes toastPop {
-    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
-    20% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-    80% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-    100% { transform: translate(-50%, -200%) scale(0.8); opacity: 0; }
+@keyframes goodFloat {
+    0% { transform: translateY(0) scale(0.8); opacity: 1; }
+    100% { transform: translateY(-100px) scale(1.2); opacity: 0; }
+}
+
+@keyframes badFloat {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    50% { transform: translateY(-20px) scale(1.1); opacity: 1; }
+    100% { transform: translateY(-60px) scale(1); opacity: 0; }
 }
 </style>
 </head>
@@ -213,9 +198,31 @@ let targetScore = 500;
 
 const candyTypes = ['🍬','🍭','🍩','🍫','🧁','🍦','🍪','🥨','🍮','🍰'];
 const rottenTypes = ['☠️','💀','🧪', '🍄', '💩'];
-const insults = ["LOSER!", "TOO SLOW!", "MOLDY!", "YUCK!", "GLITCH!", "RUDE!"];
 
-// New Rotten Message Map
+// Witty Phrases - Updated
+const sweetPhrases = [
+    "SWEET!",
+    "Gonna get a cavity!",
+    "All that candy before bed?",
+    "SUGAR RUSH!",
+    "Dentist's nightmare!",
+    "Instant regret (but tasty)!",
+    "Nom nom nom!",
+    "Save some for later!"
+];
+
+const insultPhrases = [
+    "LOSER!",
+    "TOO SLOW!",
+    "MOLDY!",
+    "YUCK!",
+    "GLITCH!",
+    "RUDE!",
+    "Epic fail!",
+    "Try harder!"
+];
+
+// Rotten Message Map
 const rottenMessages = {
     '🧪': "CANDY BOWL POISONED!",
     '☠️': "BOWL STOLEN BY THE UNDEAD!",
@@ -253,33 +260,19 @@ function playBeat(index) {
     audio.play().catch(e => console.log("Audio waiting for interaction"));
 }
 
-// 3. VISUAL FEEDBACK HELPERS
-function showTrashTalk(text, x, y) {
+// 3. VISUAL FEEDBACK HELPERS - Updated for new style
+function showFeedback(text, x, y, type) {
     const el = document.createElement('div');
-    el.className = 'trash-talk';
+    el.className = `feedback-text ${type}-feedback`;
     el.innerText = text;
-    el.style.left = (x + canvas.offsetLeft - 50) + 'px';
-    el.style.top = (y + canvas.offsetTop) + 'px';
+    // Center the wider text element over the drop point
+    el.style.left = (x + canvas.offsetLeft - 125) + 'px';
+    el.style.top = (y + canvas.offsetTop - 50) + 'px';
     document.body.appendChild(el);
-    setTimeout(() => el.remove(), 1000);
-}
-
-function showCombo(x, y, count) {
-    const el = document.createElement('div');
-    el.className = 'combo-popup';
-    el.innerText = count;
-    el.style.left = (x + canvas.offsetLeft - 15) + 'px';
-    el.style.top = (y + canvas.offsetTop - 40) + 'px';
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 600);
-}
-
-function showStatusToast(text) {
-    const el = document.createElement('div');
-    el.className = 'status-toast';
-    el.innerText = text;
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 1500);
+    
+    // Animation duration depends on type
+    const duration = type === 'good' ? 800 : 1000;
+    setTimeout(() => el.remove(), duration);
 }
 
 // 4. GAME LOGIC
@@ -372,24 +365,27 @@ function draw() {
             ctx.textAlign = "center";
             ctx.fillText(c.icon, c.x, c.y);
 
-            // Collision Logic
+            // Collision Logic - Updated for new visual style
             if (c.y > bowl.y && c.y < bowl.y + bowl.h && c.x > bowl.x && c.x < bowl.x + bowl.w) {
                 if (c.type === "bad") {
                     collected = [];
                     score = Math.max(0, score - 150);
                     
-                    // Show rotten visual and roast
-                    const msg = rottenMessages[c.icon] || "BOWL EMPTIED!";
-                    showStatusToast(msg);
-                    showTrashTalk(insults[Math.floor(Math.random()*insults.length)], c.x, c.y);
+                    // Show custom rotten visual and text roast (red glow)
+                    const roastMsg = insultPhrases[Math.floor(Math.random()*insultPhrases.length)];
+                    const rottenMsg = rottenMessages[c.icon] || "BOWL EMPTIED!";
+                    const fullMsg = `${rottenMsg}\n${roastMsg}`; // Stack messages
+                    
+                    showFeedback(fullMsg, c.x, c.y, 'bad');
                     
                     playTick(40, 0.4);
                 } else {
                     collected.push(c.icon);
                     score += 25;
                     
-                    // Show combo number
-                    showCombo(c.x, bowl.y, collected.length);
+                    // Show random witty sweet phrase (green glow)
+                    const phrase = sweetPhrases[Math.floor(Math.random()*sweetPhrases.length)];
+                    showFeedback(phrase, c.x, bowl.y, 'good');
                     
                     playTick(300 + (level*40), 0.05);
                 }
