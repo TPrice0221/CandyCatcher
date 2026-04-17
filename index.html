@@ -24,10 +24,30 @@
 
         #game-container {
             position: relative;
-            padding-top: 60px; /* Space for UI */
+            width: 900px;
+            height: 760px; /* Extra height for UI */
         }
 
-        /* Fixed container to prevent resizing "jiggle" */
+        #game-ui {
+            width: 100%;
+            height: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .stat-box {
+            background: white;
+            border: 4px solid var(--candy-pink);
+            padding: 5px 20px;
+            border-radius: 50px;
+            color: #d63384;
+            font-weight: bold;
+            font-size: 18px;
+            box-shadow: 0 4px 0 var(--candy-pink);
+        }
+
         #canvas-wrapper {
             position: relative;
             width: 900px;
@@ -36,39 +56,16 @@
             border: 10px solid white;
             border-radius: 40px;
             overflow: hidden;
-            z-index: 1;
         }
 
         canvas {
             display: block;
             background: linear-gradient(to bottom, #ffe6f2 0%, #ffb3d9 100%);
             cursor: crosshair;
-        }
-
-        /* UI Stats - Sits above everything */
-        #game-ui {
-            position: absolute;
-            top: 0;
             width: 100%;
-            display: flex;
-            justify-content: space-between;
-            pointer-events: none;
-            z-index: 50;
+            height: 100%;
         }
 
-        .stat-box {
-            background: white;
-            border: 4px solid var(--candy-pink);
-            padding: 8px 25px;
-            border-radius: 50px;
-            color: #d63384;
-            font-weight: bold;
-            font-size: 20px;
-            box-shadow: 0 4px 0 var(--candy-pink);
-            margin: 5px;
-        }
-
-        /* Feedback layer MUST NOT block mouse */
         #feedback-layer {
             position: absolute;
             top: 0;
@@ -76,13 +73,13 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
-            z-index: 10;
+            z-index: 5;
         }
 
-        .overlay, .modal {
+        .overlay {
             position: absolute;
             inset: 0;
-            background: rgba(255,105,180,0.95);
+            background: rgba(255, 105, 180, 0.95);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -98,16 +95,15 @@
             color: #d63384;
             border-radius: 40px;
             box-shadow: 0 20px 0 #d63384;
-            width: 400px;
-            height: 300px;
-            margin: auto;
+            padding: 40px;
+            z-index: 101;
         }
 
-        h1 { font-size: 50px; text-shadow: 4px 4px #d63384; margin: 0; }
+        h1 { font-size: 60px; margin: 0; text-shadow: 4px 4px #d63384; }
         
         button {
             margin-top: 20px;
-            padding: 20px 40px;
+            padding: 15px 40px;
             border: none;
             background: var(--mint);
             color: #4a0026;
@@ -120,38 +116,36 @@
 
         button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
 
-        /* Glowing Text Popups */
         .feedback-text {
             position: absolute;
             font-weight: 900;
-            font-size: 28px;
+            font-size: 32px;
             text-align: center;
-            width: 200px;
-            white-space: pre-line;
+            width: 250px;
+            pointer-events: none;
         }
 
         .good-feedback {
             color: var(--mint);
-            text-shadow: 0 0 12px rgba(0, 255, 204, 0.9), 2px 2px 0px #d63384;
-            animation: floatUp 0.8s ease-out forwards;
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.8), 2px 2px #d63384;
+            animation: floatUp 0.8s forwards;
         }
 
         .bad-feedback {
             color: var(--bad-red);
-            text-shadow: 0 0 15px rgba(255, 51, 51, 1), 2px 2px 0px #fff;
-            animation: shakeFloat 1s ease-out forwards;
+            text-shadow: 0 0 10px rgba(255, 51, 51, 0.8), 2px 2px #fff;
+            animation: shake 0.5s forwards;
         }
 
         @keyframes floatUp {
-            0% { transform: translateY(0) scale(0.8); opacity: 1; }
-            100% { transform: translateY(-120px) scale(1.3); opacity: 0; }
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-100px) scale(1.2); opacity: 0; }
         }
 
-        @keyframes shakeFloat {
-            0% { transform: translateX(0); opacity: 1; }
-            20% { transform: translateX(-10px); }
-            40% { transform: translateX(10px); }
-            100% { transform: translateY(-80px); opacity: 0; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
         }
     </style>
 </head>
@@ -160,29 +154,16 @@
 <div id="game-container">
     <div id="game-ui">
         <div class="stat-box">⭐ <span id="score">0</span></div>
-        <div class="stat-box">LVL: <span id="level">1</span></div>
+        <div class="stat-box">LEVEL <span id="level">1</span></div>
         <div class="stat-box">🥣 <span id="candyCount">0</span></div>
     </div>
 
     <div id="canvas-wrapper">
-        <div id="start-screen" class="overlay">
-            <h1>Sugar Popz' 🍬</h1>
-            <p>Catch the sweets, avoid the rot!</p>
-            <button onclick="startGame()">START GAME</button>
+        <div id="screen-overlay" class="overlay">
+            <h1>Sugar Popz!</h1>
+            <p>Catch candy, avoid the rot.</p>
+            <button onclick="bootGame()">START RACE</button>
         </div>
-
-        <div id="game-over" class="modal" style="display:none">
-            <h2>GLITCHED!</h2>
-            <p>A sweet hit the floor...</p>
-            <button onclick="location.reload()">RETRY</button>
-        </div>
-
-        <div id="level-up" class="modal" style="display:none">
-            <h2>SWEET VICTORY!</h2>
-            <p>Speed is increasing!</p>
-            <button onclick="nextLevel()">NEXT ROUND</button>
-        </div>
-
         <div id="feedback-layer"></div>
         <canvas id="game"></canvas>
     </div>
@@ -192,6 +173,7 @@
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
     const feedbackLayer = document.getElementById("feedback-layer");
+    const overlay = document.getElementById("screen-overlay");
 
     const GAME_W = 900;
     const GAME_H = 700;
@@ -199,142 +181,129 @@
     canvas.height = GAME_H;
 
     let gameActive = false;
+    let score = 0;
+    let level = 1;
+    let target = 500;
     let bowl = { x: 370, y: 620, w: 160, h: 65 };
     let candies = [];
     let collected = [];
-    let particles = [];
-    let score = 0;
-    let level = 1;
-    let targetScore = 500;
 
     const candyTypes = ['🍬','🍭','🍩','🍫','🧁','🍦','🍪','🥨','🍮','🍰'];
-    const rottenTypes = ['☠️','💀','🧪', '🍄', '💩'];
-    const sweetPhrases = ["SWEET!", "Cavity incoming!", "Candy before bed?", "SUGAR RUSH!", "Nom nom!", "Sugar Overload!"];
-    const rottenMessages = {'🧪': "POISONED!", '☠️': "STOLEN!", '💀': "CURSED!", '🍄': "TRAPPED!", '💩': "YUCK!"};
+    const badTypes = ['☠️','💀','🧪', '🍄', '💩'];
+    const phrases = ["SWEET!", "Cavity alert!", "Sugar Rush!", "Nom Nom!", "Dentist's nightmare!"];
 
-    function showFeedback(text, x, y, type) {
-        const el = document.createElement('div');
-        el.className = `feedback-text ${type}-feedback`;
-        el.innerText = text;
-        el.style.left = (x - 100) + 'px';
-        el.style.top = (y - 40) + 'px';
-        feedbackLayer.appendChild(el);
-        setTimeout(() => el.remove(), 1000);
+    function bootGame() {
+        // Physical removal ensures mouse interaction is never blocked
+        overlay.style.display = "none";
+        gameActive = true;
+        score = 0;
+        level = 1;
+        candies = [];
+        collected = [];
+        spawn();
+        requestAnimationFrame(loop);
     }
 
-    function spawnCandy() {
+    function spawn() {
         if (!gameActive) return;
-        let isRotten = Math.random() < (0.12 + level * 0.03);
+        let isBad = Math.random() < (0.1 + level * 0.02);
         candies.push({
             x: Math.random() * (GAME_W - 100) + 50,
             y: -50,
-            icon: isRotten ? rottenTypes[Math.floor(Math.random()*rottenTypes.length)] : candyTypes[Math.floor(Math.random()*candyTypes.length)],
-            type: isRotten ? "bad" : "good",
-            speed: 2 + level + (Math.random() * 1.5),
-            size: isRotten ? 55 : 40
+            icon: isBad ? badTypes[Math.floor(Math.random()*badTypes.length)] : candyTypes[Math.floor(Math.random()*candyTypes.length)],
+            type: isBad ? "bad" : "good",
+            speed: 3 + level + (Math.random() * 2)
         });
-        setTimeout(spawnCandy, 800 - (level * 50));
+        setTimeout(spawn, 1000 - (level * 50));
     }
 
-    function startGame() {
-        document.getElementById("start-screen").style.display = "none";
-        gameActive = true;
-        spawnCandy();
-        requestAnimationFrame(draw);
+    function pop(text, x, y, type) {
+        const el = document.createElement('div');
+        el.className = `feedback-text ${type}-feedback`;
+        el.innerText = text;
+        el.style.left = (x - 125) + 'px';
+        el.style.top = (y - 50) + 'px';
+        feedbackLayer.appendChild(el);
+        setTimeout(() => el.remove(), 800);
     }
 
-    function nextLevel() {
-        document.getElementById("level-up").style.display = "none";
-        level++;
-        targetScore += 500;
-        candies = [];
-        gameActive = true;
-        spawnCandy();
-    }
-
-    for (let i = 0; i < 50; i++) {
-        particles.push({ x: Math.random() * GAME_W, y: Math.random() * GAME_H, size: Math.random() * 3 + 1, speed: Math.random() * 1 + 0.5 });
-    }
-
-    function draw() {
+    function loop() {
         ctx.clearRect(0, 0, GAME_W, GAME_H);
-        
-        // BG Particles
-        ctx.fillStyle = "rgba(255,255,255,0.4)";
-        particles.forEach(p => {
-            ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
-            p.y += p.speed; if (p.y > GAME_H) p.y = 0;
-        });
 
         if (gameActive) {
             // Draw Bowl
-            ctx.save();
-            ctx.fillStyle = "white"; 
-            ctx.strokeStyle = "var(--candy-pink)"; 
+            ctx.fillStyle = "white";
+            ctx.strokeStyle = "var(--candy-pink)";
             ctx.lineWidth = 6;
-            ctx.beginPath(); 
-            ctx.roundRect(bowl.x, bowl.y, bowl.w, bowl.h, [0, 0, 30, 30]); 
-            ctx.fill(); 
+            ctx.beginPath();
+            ctx.roundRect(bowl.x, bowl.y, bowl.w, bowl.h, [0, 0, 30, 30]);
+            ctx.fill();
             ctx.stroke();
-            
-            // Draw candies inside bowl
-            collected.slice(-15).forEach((c, i) => {
-                ctx.font = "20px Arial";
-                ctx.fillText(c, bowl.x + 15 + (i % 5 * 28), bowl.y + 25 + (Math.floor(i/5) * 15));
-            });
-            ctx.restore();
 
-            // Handle Falling Candies
+            // Draw collected candy inside bowl
+            collected.slice(-10).forEach((c, i) => {
+                ctx.font = "24px Arial";
+                ctx.fillText(c, bowl.x + 20 + (i * 12), bowl.y + 35);
+            });
+
+            // Handle falling items
             for (let i = candies.length - 1; i >= 0; i--) {
                 let c = candies[i];
                 c.y += c.speed;
-                ctx.font = c.size + "px Arial";
+                ctx.font = "45px Arial";
                 ctx.textAlign = "center";
                 ctx.fillText(c.icon, c.x, c.y);
 
                 // Collision
                 if (c.y > bowl.y && c.y < bowl.y + bowl.h && c.x > bowl.x && c.x < bowl.x + bowl.w) {
                     if (c.type === "bad") {
-                        showFeedback(rottenMessages[c.icon], c.x, c.y, 'bad');
-                        collected = []; 
+                        pop("YUCK!", c.x, c.y, 'bad');
+                        collected = [];
                         score = Math.max(0, score - 100);
                     } else {
-                        collected.push(c.icon); 
+                        collected.push(c.icon);
                         score += 25;
-                        showFeedback(sweetPhrases[Math.floor(Math.random()*sweetPhrases.length)], c.x, bowl.y, 'good');
+                        pop(phrases[Math.floor(Math.random()*phrases.length)], c.x, bowl.y, 'good');
                     }
                     candies.splice(i, 1);
-                    continue;
-                }
-
-                // Missed candy
-                if (c.y > GAME_H) {
+                } else if (c.y > GAME_H) {
                     if (c.type === "good") {
                         gameActive = false;
-                        document.getElementById("game-over").style.display = "flex";
+                        overlay.innerHTML = `<div class="modal"><h2>GAME OVER</h2><p>Sweet hit the floor!</p><button onclick="location.reload()">RETRY</button></div>`;
+                        overlay.style.display = "flex";
                     }
                     candies.splice(i, 1);
                 }
             }
 
-            if (score >= targetScore) {
+            if (score >= target) {
                 gameActive = false;
-                document.getElementById("level-up").style.display = "flex";
+                level++;
+                target += 500;
+                overlay.innerHTML = `<div class="modal"><h2>VICTORY!</h2><p>Level ${level} is faster!</p><button onclick="resume()">NEXT LEVEL</button></div>`;
+                overlay.style.display = "flex";
             }
         }
 
         document.getElementById("score").innerText = score;
-        document.getElementById("candyCount").innerText = collected.length;
         document.getElementById("level").innerText = level;
-        requestAnimationFrame(draw);
+        document.getElementById("candyCount").innerText = collected.length;
+        requestAnimationFrame(loop);
     }
 
-    // Input Handling with Aspect Ratio Correction
-    window.addEventListener("mousemove", e => {
+    function resume() {
+        overlay.style.display = "none";
+        gameActive = true;
+        candies = [];
+        spawn();
+    }
+
+    // Fixed Mouse Movement
+    window.addEventListener("mousemove", (e) => {
         let rect = canvas.getBoundingClientRect();
         let scaleX = GAME_W / rect.width;
-        let x = (e.clientX - rect.left) * scaleX;
-        bowl.x = Math.max(0, Math.min(GAME_W - bowl.w, x - bowl.w/2));
+        let mouseX = (e.clientX - rect.left) * scaleX;
+        bowl.x = Math.max(0, Math.min(GAME_W - bowl.w, mouseX - bowl.w / 2));
     });
 </script>
 </body>
