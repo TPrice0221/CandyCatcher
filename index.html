@@ -104,6 +104,7 @@ button {
 
 button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
 
+/* Visual Feedback Elements */
 .trash-talk {
     position: absolute;
     pointer-events: none;
@@ -115,9 +116,50 @@ button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
     animation: floatUp 1s forwards;
 }
 
+.combo-popup {
+    position: absolute;
+    pointer-events: none;
+    font-weight: 900;
+    color: var(--mint);
+    text-shadow: 2px 2px #d63384, -1px -1px 0 #fff;
+    font-size: 32px;
+    z-index: 1000;
+    animation: comboFloat 0.6s ease-out forwards;
+}
+
+.status-toast {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.85);
+    color: #ff3333;
+    padding: 15px 30px;
+    border-radius: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    border: 4px solid #ff3333;
+    z-index: 2000;
+    animation: toastPop 1.5s forwards;
+    pointer-events: none;
+    text-align: center;
+}
+
 @keyframes floatUp {
     0% { transform: translateY(0); opacity: 1; }
     100% { transform: translateY(-100px); opacity: 0; }
+}
+
+@keyframes comboFloat {
+    0% { transform: translateY(0) scale(0.5); opacity: 1; }
+    100% { transform: translateY(-80px) scale(1.5); opacity: 0; }
+}
+
+@keyframes toastPop {
+    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+    20% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+    80% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    100% { transform: translate(-50%, -200%) scale(0.8); opacity: 0; }
 }
 </style>
 </head>
@@ -173,14 +215,22 @@ const candyTypes = ['🍬','🍭','🍩','🍫','🧁','🍦','🍪','🥨','�
 const rottenTypes = ['☠️','💀','🧪', '🍄', '💩'];
 const insults = ["LOSER!", "TOO SLOW!", "MOLDY!", "YUCK!", "GLITCH!", "RUDE!"];
 
-// 2. AUDIO SETUP (Fixed Order)
+// New Rotten Message Map
+const rottenMessages = {
+    '🧪': "CANDY BOWL POISONED!",
+    '☠️': "BOWL STOLEN BY THE UNDEAD!",
+    '💀': "SPOOKY SPIRITS EMPTIED THE BOWL!",
+    '🍄': "TRIPPY TRAP! BOWL RESET!",
+    '💩': "EWW! BOWL CONTAMINATED!"
+};
+
+// 2. AUDIO SETUP
 let currentBeatIndex = 0;
 const beats = ["beat1.mp3", "beat2.mp3", "beat3.mp3"];
 const bpm = [140, 150, 160]; 
-const audio = new Audio(); // Persistent audio object
+const audio = new Audio();
 audio.loop = true;
 
-// Helper for procedural sound effects
 let audioCtx;
 function playTick(freq, dur) {
     try {
@@ -203,7 +253,36 @@ function playBeat(index) {
     audio.play().catch(e => console.log("Audio waiting for interaction"));
 }
 
-// 3. GAME LOGIC
+// 3. VISUAL FEEDBACK HELPERS
+function showTrashTalk(text, x, y) {
+    const el = document.createElement('div');
+    el.className = 'trash-talk';
+    el.innerText = text;
+    el.style.left = (x + canvas.offsetLeft - 50) + 'px';
+    el.style.top = (y + canvas.offsetTop) + 'px';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+}
+
+function showCombo(x, y, count) {
+    const el = document.createElement('div');
+    el.className = 'combo-popup';
+    el.innerText = count;
+    el.style.left = (x + canvas.offsetLeft - 15) + 'px';
+    el.style.top = (y + canvas.offsetTop - 40) + 'px';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 600);
+}
+
+function showStatusToast(text) {
+    const el = document.createElement('div');
+    el.className = 'status-toast';
+    el.innerText = text;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1500);
+}
+
+// 4. GAME LOGIC
 function spawnCandy() {
     if (!gameActive) return;
 
@@ -217,7 +296,6 @@ function spawnCandy() {
         size: isRotten ? 55 : 35 + Math.random() * 15
     });
 
-    // Calculate spawn rate based on current BPM
     let currentBPM = bpm[currentBeatIndex % bpm.length];
     let nextSpawn = (60 / currentBPM) * 1000; 
     setTimeout(spawnCandy, nextSpawn);
@@ -245,7 +323,7 @@ function nextLevel() {
     spawnCandy();
 }
 
-// 4. RENDERING ENGINE
+// 5. RENDERING ENGINE
 for (let i = 0; i < 70; i++) {
     particles.push({
         x: Math.random() * canvas.width,
@@ -294,15 +372,25 @@ function draw() {
             ctx.textAlign = "center";
             ctx.fillText(c.icon, c.x, c.y);
 
+            // Collision Logic
             if (c.y > bowl.y && c.y < bowl.y + bowl.h && c.x > bowl.x && c.x < bowl.x + bowl.w) {
                 if (c.type === "bad") {
                     collected = [];
                     score = Math.max(0, score - 150);
+                    
+                    // Show rotten visual and roast
+                    const msg = rottenMessages[c.icon] || "BOWL EMPTIED!";
+                    showStatusToast(msg);
                     showTrashTalk(insults[Math.floor(Math.random()*insults.length)], c.x, c.y);
+                    
                     playTick(40, 0.4);
                 } else {
                     collected.push(c.icon);
                     score += 25;
+                    
+                    // Show combo number
+                    showCombo(c.x, bowl.y, collected.length);
+                    
                     playTick(300 + (level*40), 0.05);
                 }
                 candies.splice(i, 1);
@@ -312,7 +400,7 @@ function draw() {
             if (c.y > canvas.height) {
                 if (c.type === "good") {
                     gameActive = false;
-                    audio.pause(); // Stop music on lose
+                    audio.pause();
                     document.getElementById("game-over").style.display = "block";
                 }
                 candies.splice(i, 1);
@@ -330,16 +418,6 @@ function draw() {
     document.getElementById("level").innerText = level;
 
     requestAnimationFrame(draw);
-}
-
-function showTrashTalk(text, x, y) {
-    const el = document.createElement('div');
-    el.className = 'trash-talk';
-    el.innerText = text;
-    el.style.left = (x + canvas.offsetLeft - 50) + 'px';
-    el.style.top = (y + canvas.offsetTop) + 'px';
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 1000);
 }
 
 const updateBowlPos = (clientX) => {
