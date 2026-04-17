@@ -29,12 +29,32 @@ body {
     box-shadow: 0 20px 50px rgba(0,0,0,0.3);
 }
 
+/* STABILITY FIX: Fixed container prevents layout shifting */
+#canvas-wrapper {
+    position: relative;
+    width: 900px;
+    height: 700px;
+    background: #000;
+    border: 10px solid white;
+    border-radius: 40px;
+    overflow: hidden; /* Clips any pop-ups that float outside the 900x700 area */
+}
+
 canvas {
     display: block;
     background: linear-gradient(to bottom, #ffe6f2 0%, #ffb3d9 100%);
-    border: 10px solid white;
-    border-radius: 40px;
     cursor: crosshair;
+}
+
+/* Layer specifically for the glowing text pop-ups */
+#feedback-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Allows mouse through to the canvas */
+    z-index: 10;
 }
 
 #game-ui {
@@ -105,47 +125,38 @@ button {
 
 button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
 
-/* Visual Feedback Elements - Text Only & Glow */
 .feedback-text {
     position: absolute;
-    pointer-events: none;
     font-weight: 900;
-    font-size: 32px;
-    z-index: 1000;
+    font-size: 28px;
     text-align: center;
-    width: 250px;
-    white-space: pre-line; /* Respect newlines in messages */
+    width: 200px;
+    white-space: pre-line;
 }
 
-/* Green Glow for Good Candy */
 .good-feedback {
     color: var(--mint);
-    text-shadow: 
-        0 0 10px rgba(0, 255, 204, 0.7),
-        0 0 20px rgba(0, 255, 204, 0.5),
-        2px 2px 2px #d63384;
-    animation: goodFloat 0.8s ease-out forwards;
+    text-shadow: 0 0 12px rgba(0, 255, 204, 0.9), 2px 2px 0px #d63384;
+    animation: floatUp 0.8s ease-out forwards;
 }
 
-/* Red Glow for Bad Hits */
 .bad-feedback {
     color: var(--bad-red);
-    text-shadow: 
-        0 0 10px rgba(255, 51, 51, 0.7),
-        0 0 20px rgba(255, 51, 51, 0.5),
-        2px 2px 2px #fff;
-    animation: badFloat 1s ease-out forwards;
+    text-shadow: 0 0 15px rgba(255, 51, 51, 1), 2px 2px 0px #fff;
+    animation: shakeFloat 1s ease-out forwards;
 }
 
-@keyframes goodFloat {
+@keyframes floatUp {
     0% { transform: translateY(0) scale(0.8); opacity: 1; }
-    100% { transform: translateY(-100px) scale(1.2); opacity: 0; }
+    100% { transform: translateY(-120px) scale(1.3); opacity: 0; }
 }
 
-@keyframes badFloat {
-    0% { transform: translateY(0) scale(1); opacity: 1; }
-    50% { transform: translateY(-20px) scale(1.1); opacity: 1; }
-    100% { transform: translateY(-60px) scale(1); opacity: 0; }
+@keyframes shakeFloat {
+    0% { transform: translateX(0); opacity: 1; }
+    20% { transform: translateX(-10px); }
+    40% { transform: translateX(10px); }
+    60% { transform: translateX(-5px); }
+    100% { transform: translateY(-80px); opacity: 0; }
 }
 </style>
 </head>
@@ -153,47 +164,48 @@ button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
 <body>
 
 <div id="game-container">
-    <div id="start-screen" class="overlay">
-        <h1>Sugar Popz' Candy Catcher 🍬</h1>
-        <p style="font-size: 20px;">Fill the bowl to clear the level!</p>
-        <button onclick="startGame()">START RACE</button>
-    </div>
-
     <div id="game-ui">
         <div class="stat-box">⭐ <span id="score">0</span></div>
         <div class="stat-box">LVL: <span id="level">1</span></div>
         <div class="stat-box">🥣 <span id="candyCount">0</span></div>
     </div>
 
-    <div id="game-over" class="modal">
-        <h2>GLITCHED!</h2>
-        <p>A sweet hit the floor...</p>
-        <button onclick="location.reload()">RE-RACE</button>
-    </div>
+    <div id="canvas-wrapper">
+        <div id="start-screen" class="overlay">
+            <h1>Sugar Popz' Candy Catcher 🍬</h1>
+            <p style="font-size: 20px;">Fill the bowl to clear the level!</p>
+            <button onclick="startGame()">START RACE</button>
+        </div>
 
-    <div id="level-up" class="modal">
-        <h2>SWEET VICTORY!</h2>
-        <p>Prepare for a bigger Rush!</p>
-        <button onclick="location.reload()">NEXT ROUND</button>
-    </div>
+        <div id="game-over" class="modal">
+            <h2>GLITCHED!</h2>
+            <p>A sweet hit the floor...</p>
+            <button onclick="location.reload()">RE-RACE</button>
+        </div>
 
-    <canvas id="game"></canvas>
+        <div id="level-up" class="modal">
+            <h2>SWEET VICTORY!</h2>
+            <p>Prepare for a bigger Rush!</p>
+            <button onclick="nextLevel()">NEXT ROUND</button>
+        </div>
+
+        <div id="feedback-layer"></div>
+        <canvas id="game"></canvas>
+    </div>
 </div>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+const feedbackLayer = document.getElementById("feedback-layer");
 
-// Game internal resolution
-const GAME_WIDTH = 900;
-const GAME_HEIGHT = 700;
+const GAME_W = 900;
+const GAME_H = 700;
+canvas.width = GAME_W;
+canvas.height = GAME_H;
 
-canvas.width = GAME_WIDTH;
-canvas.height = GAME_HEIGHT;
-
-// 1. STATE & CONSTANTS
 let gameActive = false;
-let bowl = { x: 400, y: 620, w: 160, h: 65 };
+let bowl = { x: 370, y: 620, w: 160, h: 65 };
 let candies = [];
 let collected = [];
 let particles = [];
@@ -204,39 +216,15 @@ let targetScore = 500;
 const candyTypes = ['🍬','🍭','🍩','🍫','🧁','🍦','🍪','🥨','🍮','🍰'];
 const rottenTypes = ['☠️','💀','🧪', '🍄', '💩'];
 
-// Witty Phrases
-const sweetPhrases = [
-    "SWEET!",
-    "Gonna get a cavity!",
-    "All that candy before bed?",
-    "SUGAR RUSH!",
-    "Dentist's nightmare!",
-    "Instant regret (but tasty)!",
-    "Nom nom nom!",
-    "Save some for later!"
-];
-
-const insultPhrases = [
-    "LOSER!",
-    "TOO SLOW!",
-    "MOLDY!",
-    "YUCK!",
-    "GLITCH!",
-    "RUDE!",
-    "Epic fail!",
-    "Try harder!"
-];
-
-// Rotten Message Map
+const sweetPhrases = ["SWEET!", "Cavity incoming!", "Candy before bed?", "SUGAR RUSH!", "Dentist's nightmare!", "Nom nom!", "Sugar Overload!", "Pure Joy!"];
 const rottenMessages = {
-    '🧪': "CANDY BOWL POISONED!",
-    '☠️': "BOWL STOLEN BY THE UNDEAD!",
-    '💀': "SPOOKY SPIRITS EMPTIED THE BOWL!",
-    '🍄': "TRIPPY TRAP! BOWL RESET!",
-    '💩': "EWW! BOWL CONTAMINATED!"
+    '🧪': "POISONED!",
+    '☠️': "STOLEN!",
+    '💀': "CURSED!",
+    '🍄': "TRAPPED!",
+    '💩': "YUCK!"
 };
 
-// 2. AUDIO SETUP
 let currentBeatIndex = 0;
 const beats = ["beat1.mp3", "beat2.mp3", "beat3.mp3"];
 const bpm = [140, 150, 160]; 
@@ -254,69 +242,43 @@ function playTick(freq, dur) {
         osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
         gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
-        osc.start();
-        osc.stop(audioCtx.currentTime + dur);
+        osc.start(); osc.stop(audioCtx.currentTime + dur);
     } catch(e) {}
 }
 
 function playBeat(index) {
     audio.src = beats[index % beats.length];
-    audio.volume = 0.8;
-    audio.play().catch(e => console.log("Audio waiting for interaction"));
+    audio.play().catch(e => {});
 }
 
-// 3. VISUAL FEEDBACK HELPER - UPDATED FOR IN-GAME POSITIONING
-function showFeedback(text, gameX, gameY, type) {
-    // 1. Calculate CSS position relative to the canvas element on screen
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = rect.width / GAME_WIDTH;
-    const scaleY = rect.height / GAME_HEIGHT;
-
-    // 2. Create a DOM element perfectly aligned with the game coordinate
+function showFeedback(text, x, y, type) {
     const el = document.createElement('div');
     el.className = `feedback-text ${type}-feedback`;
     el.innerText = text;
-
-    // 3. Position precisely over the point of impact *inside* the canvas area
-    // Center width-wise (125 is half of the 250px width set in CSS)
-    el.style.left = (rect.left + (gameX * scaleX) - (125 * scaleX)) + 'px';
-    // Position slightly above impact point
-    el.style.top = (rect.top + (gameY * scaleY) - (50 * scaleY)) + 'px';
-    
-    // Apply canvas scaling to the DOM element so it looks correct
-    el.style.transformOrigin = "top left";
-    el.style.transform = `scale(${scaleX}, ${scaleY})`;
-
-    document.body.appendChild(el);
-    
-    const duration = type === 'good' ? 800 : 1000;
-    setTimeout(() => el.remove(), duration);
+    el.style.left = (x - 100) + 'px';
+    el.style.top = (y - 40) + 'px';
+    feedbackLayer.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
 }
 
-// 4. GAME LOGIC
 function spawnCandy() {
     if (!gameActive) return;
-
     let isRotten = Math.random() < (0.12 + level * 0.03);
     candies.push({
-        x: Math.random() * (GAME_WIDTH - 100) + 50,
+        x: Math.random() * (GAME_W - 100) + 50,
         y: -50,
         icon: isRotten ? rottenTypes[Math.floor(Math.random()*rottenTypes.length)] : candyTypes[Math.floor(Math.random()*candyTypes.length)],
         type: isRotten ? "bad" : "good",
         speed: 2 + level + (Math.random() * 1.5),
-        size: isRotten ? 55 : 35 + Math.random() * 15
+        size: isRotten ? 55 : 40
     });
-
-    let currentBPM = bpm[currentBeatIndex % bpm.length];
-    let nextSpawn = (60 / currentBPM) * 1000; 
-    setTimeout(spawnCandy, nextSpawn);
+    setTimeout(spawnCandy, (60 / bpm[currentBeatIndex % 3]) * 1000);
 }
 
 function startGame() {
     document.getElementById("start-screen").style.display = "none";
     gameActive = true;
-    currentBeatIndex = 0;
-    playBeat(currentBeatIndex);
+    playBeat(0);
     spawnCandy();
     requestAnimationFrame(draw);
 }
@@ -325,131 +287,75 @@ function nextLevel() {
     document.getElementById("level-up").style.display = "none";
     level++;
     targetScore += 500;
-    candies = [];
-    collected = [];
+    candies = []; collected = [];
     gameActive = true;
-    
     currentBeatIndex++;
     playBeat(currentBeatIndex);
     spawnCandy();
 }
 
-// 5. RENDERING ENGINE
-for (let i = 0; i < 70; i++) {
-    particles.push({
-        x: Math.random() * GAME_WIDTH,
-        y: Math.random() * GAME_HEIGHT,
-        size: Math.random() * 5 + 2,
-        speed: Math.random() * 1 + 0.5,
-        color: ['#fff', '#ff99cc', '#00ffcc', '#ffff99'][Math.floor(Math.random()*4)]
-    });
+for (let i = 0; i < 50; i++) {
+    particles.push({ x: Math.random() * GAME_W, y: Math.random() * GAME_H, size: Math.random() * 3 + 1, speed: Math.random() * 1 + 0.5 });
 }
 
 function draw() {
-    ctx.clearRect(0,0,GAME_WIDTH,GAME_HEIGHT);
-
+    ctx.clearRect(0, 0, GAME_W, GAME_H);
     particles.forEach(p => {
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
-        ctx.fill();
-        p.y += p.speed;
-        if (p.y > GAME_HEIGHT) p.y = 0;
+        ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+        p.y += p.speed; if (p.y > GAME_H) p.y = 0;
     });
 
     if (gameActive) {
-        // Bowl
         ctx.save();
-        ctx.fillStyle = "white";
-        ctx.strokeStyle = "var(--candy-pink)";
-        ctx.lineWidth = 8;
-        ctx.beginPath();
-        ctx.roundRect(bowl.x, bowl.y, bowl.w, bowl.h, [0, 0, 40, 40]);
-        ctx.fill();
-        ctx.stroke();
-
-        collected.slice(-24).forEach((c,i)=>{
-            ctx.font = "24px Arial";
-            let row = Math.floor(i / 6);
-            let col = i % 6;
-            ctx.fillText(c, bowl.x + 15 + (col * 22), bowl.y + 15 + (row * 15));
+        ctx.fillStyle = "white"; ctx.strokeStyle = "var(--candy-pink)"; ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.roundRect(bowl.x, bowl.y, bowl.w, bowl.h, [0, 0, 30, 30]); ctx.fill(); ctx.stroke();
+        collected.slice(-20).forEach((c, i) => {
+            ctx.font = "20px Arial";
+            ctx.fillText(c, bowl.x + 10 + (i % 5 * 28), bowl.y + 20 + (Math.floor(i/5) * 12));
         });
         ctx.restore();
 
         for (let i = candies.length - 1; i >= 0; i--) {
-            let c = candies[i];
-            c.y += c.speed;
-            ctx.font = c.size + "px Arial";
-            ctx.textAlign = "center";
+            let c = candies[i]; c.y += c.speed;
+            ctx.font = c.size + "px Arial"; ctx.textAlign = "center";
             ctx.fillText(c.icon, c.x, c.y);
 
-            // Collision Logic
             if (c.y > bowl.y && c.y < bowl.y + bowl.h && c.x > bowl.x && c.x < bowl.x + bowl.w) {
                 if (c.type === "bad") {
-                    collected = [];
-                    score = Math.max(0, score - 150);
-                    
-                    // Show custom rotten visual and text roast (red glow)
-                    const roastMsg = insultPhrases[Math.floor(Math.random()*insultPhrases.length)];
-                    const rottenMsg = rottenMessages[c.icon] || "BOWL EMPTIED!";
-                    const fullMsg = `${rottenMsg}\n${roastMsg}`; 
-                    
-                    // Use internal game coordinates for positioning
-                    showFeedback(fullMsg, c.x, c.y, 'bad');
-                    
-                    playTick(40, 0.4);
+                    showFeedback(rottenMessages[c.icon], c.x, c.y, 'bad');
+                    collected = []; score = Math.max(0, score - 100);
+                    playTick(60, 0.3);
                 } else {
-                    collected.push(c.icon);
-                    score += 25;
-                    
-                    // Show random witty sweet phrase (green glow)
-                    const phrase = sweetPhrases[Math.floor(Math.random()*sweetPhrases.length)];
-                    // Use internal game coordinates for positioning
-                    showFeedback(phrase, c.x, bowl.y, 'good');
-                    
-                    playTick(300 + (level*40), 0.05);
+                    collected.push(c.icon); score += 25;
+                    showFeedback(sweetPhrases[Math.floor(Math.random()*sweetPhrases.length)], c.x, bowl.y, 'good');
+                    playTick(400, 0.1);
                 }
-                candies.splice(i, 1);
-                continue;
+                candies.splice(i, 1); continue;
             }
-
-            if (c.y > GAME_HEIGHT) {
+            if (c.y > GAME_H) {
                 if (c.type === "good") {
-                    gameActive = false;
-                    audio.pause();
+                    gameActive = false; audio.pause();
                     document.getElementById("game-over").style.display = "block";
                 }
                 candies.splice(i, 1);
             }
         }
-
         if (score >= targetScore) {
-            gameActive = false;
-            document.getElementById("level-up").style.display = "block";
+            gameActive = false; document.getElementById("level-up").style.display = "block";
         }
     }
-
     document.getElementById("score").innerText = score;
     document.getElementById("candyCount").innerText = collected.length;
     document.getElementById("level").innerText = level;
-
     requestAnimationFrame(draw);
 }
 
-const updateBowlPos = (clientX) => {
+canvas.addEventListener("mousemove", e => {
     let rect = canvas.getBoundingClientRect();
-    // Convert screen clientX to internal game X coordinate
-    const scaleX = rect.width / GAME_WIDTH;
-    let gameX = (clientX - rect.left) / scaleX;
-    let targetX = gameX - bowl.w/2;
-    bowl.x = Math.max(0, Math.min(GAME_WIDTH - bowl.w, targetX));
-};
-
-canvas.addEventListener("mousemove", e => updateBowlPos(e.clientX));
-canvas.addEventListener("touchmove", e => {
-    e.preventDefault();
-    updateBowlPos(e.touches[0].clientX);
-}, {passive:false});
+    let x = (e.clientX - rect.left) * (GAME_W / rect.width);
+    bowl.x = Math.max(0, Math.min(GAME_W - bowl.w, x - bowl.w/2));
+});
 </script>
 </body>
 </html>
