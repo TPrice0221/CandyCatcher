@@ -177,6 +177,10 @@
     let candies = [];
     let collected = [];
     let particles = [];
+    
+    // Audio logic
+    let currentAudio = new Audio();
+    currentAudio.loop = true;
 
     const candyTypes = ['🍬','🍭','🍩','🍫','🧁','🍦','🍪','🥨','🍮','🍰'];
     const badTypes = ['☠️','💀','🧪', '🍄', '💩'];
@@ -198,12 +202,23 @@
         livesDisplay.innerText = lives > 0 ? "💗".repeat(lives) : "💔"; 
     }
 
+    function playMusic() {
+        let trackNumber = Math.min(level, 3); 
+        let trackName = `beat${trackNumber}.mp3`;
+        if (!currentAudio.src.includes(trackName)) {
+            currentAudio.src = trackName;
+            currentAudio.load();
+            currentAudio.play().catch(e => console.log("Music play blocked"));
+        }
+    }
+
     function bootGame() {
         overlay.style.display = "none";
         gameActive = true;
         score = 0; level = 1; lives = 3;
         candies = []; collected = [];
         updateLivesDisplay();
+        playMusic();
         spawn();
         requestAnimationFrame(loop);
     }
@@ -225,13 +240,10 @@
     function spawn() {
         if (!gameActive) return;
 
-        // Life recovery logic: Rare chance to spawn a heart next to poison if lives < 3
         if (lives < 3 && Math.random() < 0.15) {
             let startX = Math.random() * (GAME_W - 200) + 50;
             let speed = 4 + level;
-            // Spawn the Heart
             candies.push({ x: startX, y: -50, icon: '💗', type: 'life', speed: speed });
-            // Spawn the Poison right next to it
             candies.push({ x: startX + 50, y: -50, icon: '🧪', type: 'bad', speed: speed });
         } else {
             let isBad = Math.random() < (0.12 + level * 0.03);
@@ -323,6 +335,7 @@
     function levelUp() {
         gameActive = false; level++;
         collected = []; candies = [];
+        playMusic();
         modalContent.innerHTML = `<h1>LEVEL UP!</h1><p>Bowl filled!<br>Next Goal: **${getCurrentTarget()}** candies.</p><button onclick="resume()">CONTINUE</button>`;
         overlay.style.display = "flex";
     }
@@ -330,6 +343,7 @@
     function resume() { overlay.style.display = "none"; gameActive = true; spawn(); requestAnimationFrame(loop); }
     function gameOver() {
         gameActive = false;
+        currentAudio.pause();
         modalContent.innerHTML = `<h1>GAME OVER</h1><p>No hearts left!</p><button onclick="location.reload()">TRY AGAIN</button>`;
         overlay.style.display = "flex";
     }
