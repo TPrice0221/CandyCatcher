@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sugar Popz: 3 Hearts Edition</title>
+    <title>Sugar Popz: Risk & Reward</title>
     <style>
         :root { 
             --candy-pink: #ff69b4; 
@@ -150,7 +150,7 @@
     <div id="screen-overlay" class="overlay">
         <div class="modal-box" id="modal-content">
             <h1>Sugar Popz!</h1>
-            <p>Fill the bowl to level up!<br>You have 3 hearts. Don't let the candy drop!</p>
+            <p>Catch 💗 to regain lives, but watch out!<br>They only fall with 🧪 poison.</p>
             <button onclick="bootGame()">START GAME</button>
         </div>
     </div>
@@ -180,7 +180,7 @@
 
     const candyTypes = ['🍬','🍭','🍩','🍫','🧁','🍦','🍪','🥨','🍮','🍰'];
     const badTypes = ['☠️','💀','🧪', '🍄', '💩'];
-    const sweetPhrases = ["SWEET!", "Sugar Rush!", "Nom Nom!", "Gimme more!", "Delicious!", "Sugar High!"];
+    const sweetPhrases = ["SWEET!", "Sugar Rush!", "Nom Nom!", "Delicious!"];
     const rottenMessages = {'🧪': "POISONED!", '☠️': "STOLEN!", '💀': "CURSED!", '🍄': "TRAPPED!", '💩': "YUCK!"};
 
     for (let i = 0; i < 60; i++) {
@@ -193,13 +193,9 @@
         });
     }
 
-    function getCurrentTarget() {
-        return 20 + ((level - 1) * 5);
-    }
-
-    function updateLivesDisplay() {
-        livesDisplay.innerText = "💗".repeat(lives);
-        if (lives === 0) livesDisplay.innerText = "💔";
+    function getCurrentTarget() { return 20 + ((level - 1) * 5); }
+    function updateLivesDisplay() { 
+        livesDisplay.innerText = lives > 0 ? "💗".repeat(lives) : "💔"; 
     }
 
     function bootGame() {
@@ -228,14 +224,26 @@
 
     function spawn() {
         if (!gameActive) return;
-        let isBad = Math.random() < (0.12 + level * 0.03);
-        candies.push({
-            x: Math.random() * (GAME_W - 100) + 50,
-            y: -50,
-            icon: isBad ? badTypes[Math.floor(Math.random()*badTypes.length)] : candyTypes[Math.floor(Math.random()*candyTypes.length)],
-            type: isBad ? "bad" : "good",
-            speed: 4 + level + (Math.random() * 2)
-        });
+
+        // Life recovery logic: Rare chance to spawn a heart next to poison if lives < 3
+        if (lives < 3 && Math.random() < 0.15) {
+            let startX = Math.random() * (GAME_W - 200) + 50;
+            let speed = 4 + level;
+            // Spawn the Heart
+            candies.push({ x: startX, y: -50, icon: '💗', type: 'life', speed: speed });
+            // Spawn the Poison right next to it
+            candies.push({ x: startX + 50, y: -50, icon: '🧪', type: 'bad', speed: speed });
+        } else {
+            let isBad = Math.random() < (0.12 + level * 0.03);
+            candies.push({
+                x: Math.random() * (GAME_W - 100) + 50,
+                y: -50,
+                icon: isBad ? badTypes[Math.floor(Math.random()*badTypes.length)] : candyTypes[Math.floor(Math.random()*candyTypes.length)],
+                type: isBad ? "bad" : "good",
+                speed: 4 + level + (Math.random() * 2)
+            });
+        }
+        
         let delay = Math.max(250, 700 - (level * 80)); 
         setTimeout(spawn, delay);
     }
@@ -243,7 +251,7 @@
     function pop(text, x, y, type) {
         const el = document.createElement('div');
         el.className = `feedback-text`;
-        el.style.color = type === 'good' ? 'var(--mint)' : 'var(--bad-red)';
+        el.style.color = type === 'good' ? 'var(--mint)' : (type === 'life' ? 'white' : 'var(--bad-red)');
         el.style.textShadow = type === 'good' ? '0 0 10px #00ffcc, 2px 2px #d63384' : '0 0 10px #ff3333, 2px 2px #fff';
         el.innerText = text;
         el.style.left = (x - 125) + 'px';
@@ -282,21 +290,22 @@
                 if (c.type === "bad") {
                     pop(rottenMessages[c.icon] || "YUCK!", c.x, c.y, 'bad');
                     collected = [];
+                } else if (c.type === "life") {
+                    if (lives < 3) lives++;
+                    updateLivesDisplay();
+                    pop("+1 LIFE!", c.x, c.y, 'life');
                 } else {
                     collected.push(c.icon);
                     score += 25;
                     pop(sweetPhrases[Math.floor(Math.random()*sweetPhrases.length)], c.x, bowl.y, 'good');
-                    
-                    if (collected.length >= currentTarget) {
-                        levelUp();
-                    }
+                    if (collected.length >= currentTarget) levelUp();
                 }
                 candies.splice(i, 1);
             } else if (c.y > GAME_H + 50) {
                 if (c.type === "good") {
                     lives--;
                     updateLivesDisplay();
-                    pop("LOST HEART!", c.x, GAME_H - 100, 'bad');
+                    pop("MISS!", c.x, GAME_H - 100, 'bad');
                     if (lives <= 0) gameOver();
                 }
                 candies.splice(i, 1);
@@ -312,25 +321,16 @@
     }
 
     function levelUp() {
-        gameActive = false;
-        level++;
-        collected = [];
-        candies = [];
-        let nextTarget = getCurrentTarget();
-        modalContent.innerHTML = `<h1>LEVEL UP!</h1><p>Bowl filled!<br>Next Goal: **${nextTarget}** candies.</p><button onclick="resume()">CONTINUE</button>`;
+        gameActive = false; level++;
+        collected = []; candies = [];
+        modalContent.innerHTML = `<h1>LEVEL UP!</h1><p>Bowl filled!<br>Next Goal: **${getCurrentTarget()}** candies.</p><button onclick="resume()">CONTINUE</button>`;
         overlay.style.display = "flex";
     }
 
-    function resume() {
-        overlay.style.display = "none";
-        gameActive = true;
-        spawn();
-        requestAnimationFrame(loop);
-    }
-
+    function resume() { overlay.style.display = "none"; gameActive = true; spawn(); requestAnimationFrame(loop); }
     function gameOver() {
         gameActive = false;
-        modalContent.innerHTML = `<h1>GAME OVER</h1><p>You ran out of hearts!</p><button onclick="location.reload()">TRY AGAIN</button>`;
+        modalContent.innerHTML = `<h1>GAME OVER</h1><p>No hearts left!</p><button onclick="location.reload()">TRY AGAIN</button>`;
         overlay.style.display = "flex";
     }
 </script>
