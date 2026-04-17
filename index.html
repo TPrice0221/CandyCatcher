@@ -126,7 +126,7 @@ button:active { transform: translateY(4px); box-shadow: 0 2px 0 #00ccaa; }
 
 <div id="game-container">
     <div id="start-screen" class="overlay">
-        <h1>SUGAR POPZ</h1>
+        <h1>Candy Catcher</h1>
         <p style="font-size: 20px;">Fill the bowl to clear the level!</p>
         <button onclick="startGame()">START RACE</button>
     </div>
@@ -167,26 +167,32 @@ let particles = [];
 let score = 0;
 let level = 1;
 let targetScore = 500;
+    let bpm = [140, 150, 160]; // match your beats
+let currentBPM = bpm[currentBeatIndex];
+
+let nextSpawn = (60 / currentBPM) * 1000;
 
 const candyTypes = ['🍬','🍭','🍩','🍫','🧁','🍦','🍪','🥨','🍮','🍰'];
 const rottenTypes = ['☠️','💀','🧪', '🍄', '💩'];
 const insults = ["LOSER!", "TOO SLOW!", "MOLDY!", "YUCK!", "GLITCH!", "RUDE!"];
 
 // 🎹 AUDIO ENGINE
-let audioCtx;
-function playTick(freq, dur) {
-    try {
-        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        let osc = audioCtx.createOscillator();
-        let gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
-        osc.start();
-        osc.stop(audioCtx.currentTime + dur);
-    } catch(e) {}
+// 🎧 REAL AUDIO SYSTEM
+let audio = new Audio();
+let currentBeatIndex = 0;
+
+const beats = [
+    "beat1.mp3",
+    "beat2.mp3",
+    "beat3.mp3"
+];
+
+function playBeat(index) {
+    audio.pause();
+    audio = new Audio(beats[index]);
+    audio.loop = true;
+    audio.volume = 0.8;
+    audio.play();
 }
 
 // SPRINKLE BACKDROP
@@ -225,6 +231,7 @@ function startGame() {
     gameActive = true;
     spawnCandy(); // Trigger the spawn loop
     requestAnimationFrame(draw);
+    playBeat(currentBeatIndex);
     
     // Background beat loop
     setInterval(() => { 
@@ -239,6 +246,12 @@ function nextLevel() {
     candies = []; // Clear current falling ones
     collected = []; // Clear bowl visuals
     gameActive = true;
+    currentBeatIndex++;
+if (currentBeatIndex >= beats.length) {
+    currentBeatIndex = 0; // loop beats if you run out
+}
+
+playBeat(currentBeatIndex);
     spawnCandy(); // RE-START the spawn loop for the new level
 }
 
