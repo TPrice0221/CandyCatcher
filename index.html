@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sugar Popz: Scaling Challenge</title>
+    <title>Sugar Popz: 3 Hearts Edition</title>
     <style>
         :root { 
             --candy-pink: #ff69b4; 
@@ -41,8 +41,17 @@
             border-radius: 50px;
             color: #d63384;
             font-weight: bold;
-            font-size: clamp(14px, 4vw, 18px);
+            font-size: clamp(12px, 3.5vw, 18px);
             box-shadow: 0 4px 0 var(--candy-pink);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #lives-display {
+            color: var(--candy-pink);
+            font-size: 20px;
+            letter-spacing: 2px;
         }
 
         #canvas-wrapper {
@@ -133,6 +142,7 @@
 <div id="game-ui">
     <div class="stat-box">⭐ <span id="score">0</span></div>
     <div class="stat-box">LVL <span id="level">1</span></div>
+    <div class="stat-box" id="lives-display">💗💗💗</div>
     <div class="stat-box">🥣 <span id="candyCount">0</span>/<span id="targetDisplay">20</span></div>
 </div>
 
@@ -140,7 +150,7 @@
     <div id="screen-overlay" class="overlay">
         <div class="modal-box" id="modal-content">
             <h1>Sugar Popz!</h1>
-            <p>Fill the bowl to level up!<br>Rotten candy resets your progress.</p>
+            <p>Fill the bowl to level up!<br>You have 3 hearts. Don't let the candy drop!</p>
             <button onclick="bootGame()">START GAME</button>
         </div>
     </div>
@@ -154,6 +164,7 @@
     const feedbackLayer = document.getElementById("feedback-layer");
     const overlay = document.getElementById("screen-overlay");
     const modalContent = document.getElementById("modal-content");
+    const livesDisplay = document.getElementById("lives-display");
 
     const GAME_W = 900;
     const GAME_H = 700;
@@ -161,7 +172,7 @@
     canvas.height = GAME_H;
 
     let gameActive = false;
-    let score = 0, level = 1;
+    let score = 0, level = 1, lives = 3;
     let bowl = { x: 370, y: 600, w: 160, h: 65 };
     let candies = [];
     let collected = [];
@@ -182,16 +193,21 @@
         });
     }
 
-    // Helper to get current target based on level
     function getCurrentTarget() {
         return 20 + ((level - 1) * 5);
+    }
+
+    function updateLivesDisplay() {
+        livesDisplay.innerText = "💗".repeat(lives);
+        if (lives === 0) livesDisplay.innerText = "💔";
     }
 
     function bootGame() {
         overlay.style.display = "none";
         gameActive = true;
-        score = 0; level = 1;
+        score = 0; level = 1; lives = 3;
         candies = []; collected = [];
+        updateLivesDisplay();
         spawn();
         requestAnimationFrame(loop);
     }
@@ -277,7 +293,12 @@
                 }
                 candies.splice(i, 1);
             } else if (c.y > GAME_H + 50) {
-                if (c.type === "good") gameOver();
+                if (c.type === "good") {
+                    lives--;
+                    updateLivesDisplay();
+                    pop("LOST HEART!", c.x, GAME_H - 100, 'bad');
+                    if (lives <= 0) gameOver();
+                }
                 candies.splice(i, 1);
             }
         }
@@ -309,7 +330,7 @@
 
     function gameOver() {
         gameActive = false;
-        modalContent.innerHTML = `<h1>GAME OVER</h1><p>A sweet escaped!</p><button onclick="location.reload()">TRY AGAIN</button>`;
+        modalContent.innerHTML = `<h1>GAME OVER</h1><p>You ran out of hearts!</p><button onclick="location.reload()">TRY AGAIN</button>`;
         overlay.style.display = "flex";
     }
 </script>
