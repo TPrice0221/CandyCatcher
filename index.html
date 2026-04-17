@@ -206,18 +206,26 @@
     canvas.addEventListener("mousemove", handleMove);
     canvas.addEventListener("touchmove", (e) => { handleMove(e); e.preventDefault(); }, { passive: false });
 
-    function spawn() {
-        if (!gameActive) return;
-        let isBad = Math.random() < (0.12 + level * 0.02);
-        candies.push({
-            x: Math.random() * (GAME_W - 100) + 50,
-            y: -50,
-            icon: isBad ? badTypes[Math.floor(Math.random()*badTypes.length)] : candyTypes[Math.floor(Math.random()*candyTypes.length)],
-            type: isBad ? "bad" : "good",
-            speed: 3 + level + (Math.random() * 1.5)
-        });
-        setTimeout(spawn, Math.max(300, 1000 - (level * 60)));
-    }
+    // Faster spawning logic
+function spawn() {
+    if (!gameActive) return;
+    
+    let isBad = Math.random() < (0.12 + level * 0.03); // Slightly more rotten items per level
+    candies.push({
+        x: Math.random() * (GAME_W - 100) + 50,
+        y: -50,
+        icon: isBad ? badTypes[Math.floor(Math.random()*badTypes.length)] : candyTypes[Math.floor(Math.random()*candyTypes.length)],
+        type: isBad ? "bad" : "good",
+        speed: 4 + level + (Math.random() * 2) // Base speed starts at 5 now, not 4
+    });
+
+    // Frequency logic: Level 1 starts at 700ms (was 1000ms)
+    // Every level speeds up the spawn rate by 80ms
+    let delay = Math.max(250, 700 - (level * 80)); 
+    setTimeout(spawn, delay);
+}
+
+// Updated Level Up to ensure the speed scales correctly
 
     function pop(text, x, y, type) {
         const el = document.createElement('div');
@@ -286,13 +294,18 @@
     }
 
     function levelUp() {
-        gameActive = false;
-        level++;
-        collected = [];
-        candies = [];
-        modalContent.innerHTML = `<h1>LEVEL UP!</h1><p>You filled the bowl!<br>Prepare for Level ${level}.</p><button onclick="resume()">CONTINUE</button>`;
-        overlay.style.display = "flex";
-    }
+    gameActive = false;
+    level++;
+    collected = [];
+    candies = [];
+    modalContent.innerHTML = `
+        <h1>LEVEL UP!</h1>
+        <p>Sugar rush increasing!<br>Spawns are now **faster** for Level ${level}.</p>
+        <button onclick="resume()">BRING IT ON</button>
+    `;
+    overlay.style.display = "flex";
+}
+
 
     function resume() {
         overlay.style.display = "none";
