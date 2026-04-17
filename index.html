@@ -293,18 +293,51 @@ function spawn() {
         requestAnimationFrame(loop);
     }
 
-    function levelUp() {
+    // 1. Updated Level Up Logic
+function levelUp() {
     gameActive = false;
     level++;
+    
+    // Clear the board for the next round
     collected = [];
     candies = [];
+    
+    // Calculate the new target for the UI
+    let nextTarget = 20 + ((level - 1) * 5);
+    
     modalContent.innerHTML = `
         <h1>LEVEL UP!</h1>
-        <p>Sugar rush increasing!<br>Spawns are now **faster** for Level ${level}.</p>
-        <button onclick="resume()">BRING IT ON</button>
+        <p>Bowl size increased!<br>You now need **${nextTarget}** candies for Level ${level}.</p>
+        <button onclick="resume()">BRING THE RUSH</button>
     `;
     overlay.style.display = "flex";
 }
+
+// 2. Updated Loop Logic (Look for the Collision section)
+// ... inside the for-loop where candies hit the bowl:
+if (hitBowl) {
+    if (c.type === "bad") {
+        pop(rottenMessages[c.icon] || "YUCK!", c.x, c.y, 'bad');
+        collected = []; 
+    } else {
+        collected.push(c.icon);
+        score += 25;
+        pop(sweetPhrases[Math.floor(Math.random()*sweetPhrases.length)], c.x, bowl.y, 'good');
+        
+        // CHECK DYNAMIC TARGET:
+        let currentTarget = 20 + ((level - 1) * 5);
+        if (collected.length >= currentTarget) {
+            levelUp();
+        }
+    }
+    candies.splice(i, 1);
+}
+
+// 3. Updated UI Display (At the bottom of loop)
+let displayTarget = 20 + ((level - 1) * 5);
+document.getElementById("candyCount").innerText = collected.length;
+// Update the HTML to show the current level's goal
+document.querySelector(".stat-box:nth-child(3)").innerHTML = `🥣 <span id="candyCount">${collected.length}</span>/${displayTarget}`;
 
 
     function resume() {
