@@ -248,14 +248,16 @@ function playMusic() {
 }
 
     function bootGame() {
-        playMusic();
-        overlay.style.display = "none";
-        gameActive = true;
-        score = 0; level = 1; lives = 3;
-        candies = []; collected = [];
-        updateLivesDisplay();
-        spawn();
-        requestAnimationFrame(loop);
+    initAudio();     // 🔥 MUST be first
+    playMusic();     // 🔥 MUST be immediately after
+
+    overlay.style.display = "none";
+    gameActive = true;
+    score = 0; level = 1; lives = 3;
+    candies = []; collected = [];
+    updateLivesDisplay();
+    spawn();
+    requestAnimationFrame(loop);
     }
 
     function handleMove(e) {
