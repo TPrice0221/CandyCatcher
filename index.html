@@ -151,7 +151,7 @@
         <div class="modal-box" id="modal-content">
             <h1>Sugar Popz Candy Catcher 🍬</h1>
             <p>Catch 🍬 Fill the bowl to advance! <br>Careful! ☠️ Rotten Candy empties your bowl! </p>
-            <button onclick="bootGame()">START GAME</button>
+            <button onclick="bootGame(); initAudio();">START GAME</button>
         </div>
     </div>
     <div id="feedback-layer"></div>
@@ -177,6 +177,18 @@
     let candies = [];
     let collected = [];
     let particles = [];
+    let audioCtx;
+let music;
+
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+    }
+}
     
     // Audio logic
     let currentAudio = new Audio();
@@ -206,24 +218,33 @@ function playMusic() {
     let trackNumber = Math.min(level, 3);
     let trackName = `beat${trackNumber}.mp3`;
 
-    if (!currentAudio.src.includes(trackName)) {
-        currentAudio.pause();
-        currentAudio = new Audio(trackName);
-        currentAudio.loop = true;
-        currentAudio.volume = 0.5;
+    if (music && music.src.includes(trackName)) return;
 
-        // FORCE play inside user interaction chain
-        let playPromise = currentAudio.play();
-
-        if (playPromise !== undefined) {
-            playPromise.catch(() => {
-                // Try again after slight delay (mobile fix)
-                setTimeout(() => {
-                    currentAudio.play().catch(() => {});
-                }, 300);
-            });
-        }
+    if (music) {
+        music.pause();
+        music = null;
     }
+
+    music = new Audio(trackName);
+    music.loop = true;
+    music.volume = 0.6;
+
+    // 🔥 force load + play
+    music.load();
+
+    let playPromise = music.play();
+
+    if (playPromise !== undefined) {
+        playPromise.catch(() => {
+            console.log("Blocked… retrying like a stubborn human");
+
+            // retry after interaction
+            setTimeout(() => {
+                music.play().catch(() => {});
+            }, 300);
+        });
+    }
+}
 }
 
     function bootGame() {
