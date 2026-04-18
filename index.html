@@ -140,9 +140,6 @@
 <body>
 
 <audio id="bgMusic" src="beat1.mp3" preload="auto" loop></audio>
-    <source src="beat1.mp3" type="audio/mpeg">
-</audio>
-
 <div id="game-ui">
     <div class="stat-box">⭐ <span id="score">0</span></div>
     <div class="stat-box">LVL <span id="level">1</span></div>
@@ -155,7 +152,7 @@
         <div class="modal-box" id="modal-content">
             <h1>Sugar Popz Candy Catcher 🍬</h1>
             <p>Catch 🍬 Fill the bowl to advance! <br>Careful! ☠️ Rotten Candy empties your bowl! </p>
-            <button onclick="initAudio(); bootGame();">START GAME</button>
+            <button onclick="bootGame()">START GAME</button>
         </div>
     </div>
     <div id="feedback-layer"></div>
@@ -215,10 +212,23 @@
     }
 
     function playMusic() {
-        music.currentTime = 0;
-        music.play().catch(err => {
-            console.log("Audio play failed:", err);
+    if (!music) {
+        console.log("Music element missing");
+        return;
+    }
+
+    music.currentTime = 0;
+
+    let p = music.play();
+
+    if (p !== undefined) {
+        p.catch(() => {
+            // mobile retry
+            setTimeout(() => {
+                music.play().catch(()=>{});
+            }, 200);
         });
+    }
     }
 
     function switchTrack(lvl) {
