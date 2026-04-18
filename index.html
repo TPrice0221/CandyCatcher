@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sugar Popz: Powered By Producers</title>
+    <title>Sugar Popz: Risk & Reward</title>
     <style>
         :root {  
             --candy-pink: #ff69b4; 
@@ -140,6 +140,7 @@
 <body>
 
 <audio id="bgMusic" src="beat1.mp3" preload="auto" loop></audio>
+
 <div id="game-ui">
     <div class="stat-box">⭐ <span id="score">0</span></div>
     <div class="stat-box">LVL <span id="level">1</span></div>
@@ -151,7 +152,9 @@
     <div id="screen-overlay" class="overlay">
         <div class="modal-box" id="modal-content">
             <h1>Sugar Popz 🍬</h1>
-            <p>Catch 🍬 Fill the bowl to advance! <br>Careful! ☠️ Rotten Candy resets your progress! </p>
+            <p>Catch 🍬 Fill the bowl to advance!<br>
+               Careful! ☠️ Rotten Candy resets your progress!<br>
+               <b>Risk & Reward:</b> 💗 Hearts fall with 🧪 Poison!</p>
             <button onclick="bootGame()">START GAME</button>
         </div>
     </div>
@@ -186,7 +189,7 @@
     const sweetPhrases = ["SWEET!", "Sugar Rush!", "Nom Nom!", "Delicious!"];
     const rottenMessages = {'🧪': "POISONED!", '☠️': "STOLEN!", '💀': "CURSED!", '🍄': "TRAPPED!", '💩': "YUCK!"};
 
-    // Particles
+    // Background Sparkles
     for (let i = 0; i < 60; i++) {
         particles.push({
             x: Math.random() * GAME_W,
@@ -203,8 +206,15 @@
         livesDisplay.innerText = lives > 0 ? "💗".repeat(lives) : "💔"; 
     }
 
+    function startMusic() {
+        if (music) {
+            music.currentTime = 0;
+            music.play().catch(e => console.log("Audio play blocked until user interaction."));
+        }
+    }
+
     function bootGame() {
-        if(music) music.play().catch(()=>{});
+        startMusic();
         overlay.style.display = "none";
         gameActive = true;
         score = 0;
@@ -235,21 +245,25 @@
     function spawn() {
         if (!gameActive) return;
 
-        if (lives < 3 && Math.random() < 0.10) {
+        // "Risk & Reward" Mechanic: Hearts fall paired with a Poison icon
+        if (lives < 3 && Math.random() < 0.15) {
             let startX = Math.random() * (GAME_W - 200) + 50;
-            candies.push({ x: startX, y: -50, icon: '💗', type: 'life', speed: 4 + level });
+            let speed = 4 + level;
+            // Spawn the Heart and a Poison right next to it
+            candies.push({ x: startX, y: -50, icon: '💗', type: 'life', speed: speed });
+            candies.push({ x: startX + 60, y: -50, icon: '🧪', type: 'bad', speed: speed });
         } else {
-            let isBad = Math.random() < (0.12 + level * 0.02);
+            let isBad = Math.random() < (0.12 + level * 0.03);
             candies.push({
                 x: Math.random() * (GAME_W - 100) + 50,
                 y: -50,
                 icon: isBad ? badTypes[Math.floor(Math.random()*badTypes.length)] : candyTypes[Math.floor(Math.random()*candyTypes.length)],
                 type: isBad ? "bad" : "good",
-                speed: 3 + level + (Math.random() * 2)
+                speed: 4 + level + (Math.random() * 2)
             });
         }
         
-        let delay = Math.max(300, 800 - (level * 50)); 
+        let delay = Math.max(250, 750 - (level * 70)); 
         spawnTimer = setTimeout(spawn, delay);
     }
 
@@ -257,6 +271,7 @@
         const el = document.createElement('div');
         el.className = `feedback-text`;
         el.style.color = type === 'good' ? 'var(--mint)' : (type === 'life' ? 'white' : 'var(--bad-red)');
+        el.style.textShadow = type === 'bad' ? '2px 2px 0px #000' : '2px 2px 0px #d63384';
         el.style.left = (x - 125) + 'px';
         el.style.top = (y - 50) + 'px';
         el.innerText = text;
@@ -268,21 +283,21 @@
         if (!gameActive) return;
         ctx.clearRect(0, 0, GAME_W, GAME_H);
 
-        // BG
+        // Background particles
         particles.forEach(p => {
             ctx.fillStyle = p.color + '88';
             ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
             p.y += p.speed; if (p.y > GAME_H) p.y = 0;
         });
 
-        // Bowl
+        // The Bowl
         ctx.fillStyle = "white"; ctx.strokeStyle = "var(--candy-pink)"; ctx.lineWidth = 6;
         ctx.beginPath(); ctx.roundRect(bowl.x, bowl.y, bowl.w, bowl.h, [0, 0, 30, 30]); ctx.fill(); ctx.stroke();
         
-        // Collected candy visual
-        collected.slice(-15).forEach((c, i) => {
-            ctx.font = "20px Arial";
-            ctx.fillText(c, bowl.x + 20 + (i % 5 * 30), bowl.y + 25 + (Math.floor(i/5) * 15));
+        // Show last 20 collected candies inside bowl
+        collected.slice(-20).forEach((c, i) => {
+            ctx.font = "22px Arial";
+            ctx.fillText(c, bowl.x + 15 + (i % 5 * 30), bowl.y + 25 + (Math.floor(i/5) * 15));
         });
 
         let currentTarget = getCurrentTarget();
@@ -293,11 +308,11 @@
             ctx.font = "48px Arial"; ctx.textAlign = "center";
             ctx.fillText(c.icon, c.x, c.y);
 
-            // Collision
-            if (c.y + 20 > bowl.y && c.y < bowl.y + bowl.h && c.x > bowl.x && c.x < bowl.x + bowl.w) {
+            // Catch Collision
+            if (c.y + 20 > bowl.y && c.y < bowl.y + bowl.h && c.x > bowl.x - 20 && c.x < bowl.x + bowl.w + 20) {
                 if (c.type === "bad") {
                     pop(rottenMessages[c.icon] || "YUCK!", c.x, c.y, 'bad');
-                    collected = [];
+                    collected = []; // Reset bowl progress
                 } else if (c.type === "life") {
                     if (lives < 3) lives++;
                     updateLivesDisplay();
@@ -308,13 +323,13 @@
                     pop(sweetPhrases[Math.floor(Math.random()*sweetPhrases.length)], c.x, bowl.y, 'good');
                     
                     if (collected.length >= currentTarget) {
-                        // Immediately update count before pausing
                         document.getElementById("candyCount").innerText = collected.length;
-                        setTimeout(levelUp, 100); 
+                        setTimeout(levelUp, 150);
                     }
                 }
                 candies.splice(i, 1);
             } else if (c.y > GAME_H + 50) {
+                // Missed good candy results in life loss
                 if (c.type === "good") {
                     lives--;
                     updateLivesDisplay();
@@ -334,6 +349,7 @@
     }
 
     function levelUp() {
+        if (!gameActive) return;
         gameActive = false;
         clearTimeout(spawnTimer);
         level++;
@@ -342,7 +358,7 @@
 
         modalContent.innerHTML = `
             <h1>LEVEL UP!</h1>
-            <p>Bowl filled!<br>Level ${level} is faster!</p>
+            <p>Sugar High! Next goal: ${getCurrentTarget()} candies.</p>
             <button onclick="resume()">CONTINUE</button>
         `;
         overlay.style.display = "flex";
@@ -359,7 +375,7 @@
         gameActive = false;
         clearTimeout(spawnTimer);
         if(music) music.pause();
-        modalContent.innerHTML = `<h1>GAME OVER</h1><p>Final Score: ${score}</p><button onclick="location.reload()">TRY AGAIN</button>`;
+        modalContent.innerHTML = `<h1>GAME OVER</h1><p>Score: ${score}</p><button onclick="location.reload()">TRY AGAIN</button>`;
         overlay.style.display = "flex";
     }
 </script>
