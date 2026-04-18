@@ -22,6 +22,9 @@
             align-items: center;
             height: 100vh;
             touch-action: none;
+            <audio id="bgMusic" preload="auto" loop>
+  <source src="beat1.mp3" type="audio/mpeg">
+</audio>
         }
 
         #game-ui {
@@ -214,52 +217,46 @@ function initAudio() {
         livesDisplay.innerText = lives > 0 ? "💗".repeat(lives) : "💔"; 
     }
 
-function playMusic() {
-    let trackNumber = Math.min(level, 3);
-    let trackName = `beat${trackNumber}.mp3`;
+    function playMusic() {
+    const music = document.getElementById("bgMusic");
 
-    if (music && music.src.includes(trackName)) return;
+    music.currentTime = 0;
 
-    if (music) {
-        music.pause();
-        music = null;
+    music.play().catch(err => {
+        console.log("Still blocked somehow:", err);
+    });
     }
-
-    music = new Audio(trackName);
-    music.loop = true;
-    music.volume = 0.6;
-
-    // 🔥 force load + play
-    music.load();
-
-    let playPromise = music.play();
-
-    if (playPromise !== undefined) {
-        playPromise.catch(() => {
-            console.log("Blocked… retrying like a stubborn human");
-
-            // retry after interaction
-            setTimeout(() => {
-                music.play().catch(() => {});
-            }, 300);
-        });
-    }
-}
-
 
     function bootGame() {
-    initAudio();     // 🔥 MUST be first
-    playMusic();     // 🔥 MUST be immediately after
+    playMusic(); // FIRST. not later. not maybe. NOW.
 
     overlay.style.display = "none";
     gameActive = true;
-    score = 0; level = 1; lives = 3;
-    candies = []; collected = [];
+
+    score = 0;
+    level = 1;
+    lives = 3;
+
+    candies = [];
+    collected = [];
+
     updateLivesDisplay();
     spawn();
     requestAnimationFrame(loop);
     }
+function switchTrack(level) {
+    const music = document.getElementById("bgMusic");
 
+    let track = Math.min(level, 3);
+    let newSrc = `beat${track}.mp3`;
+
+    if (!music.src.includes(newSrc)) {
+        music.pause();
+        music.src = newSrc;
+        music.load();
+        music.play().catch(()=>{});
+    }
+}
     function handleMove(e) {
         if (!gameActive) return;
         const rect = canvas.getBoundingClientRect();
@@ -370,13 +367,24 @@ function playMusic() {
     }
 
     function levelUp() {
-        gameActive = false; level++;
-        collected = []; candies = [];
-        playMusic();
-        modalContent.innerHTML = `<h1>LEVEL UP!</h1><p>Bowl filled!<br>Next Goal: **${getCurrentTarget()}** candies.</p><button onclick="resume()">CONTINUE</button>`;
-        overlay.style.display = "flex";
-    }
+    gameActive = false;
 
+    level++;
+
+    // 🔥 THIS is where it goes
+    switchTrack(level);
+
+    collected = [];
+    candies = [];
+
+    modalContent.innerHTML = `
+        <h1>LEVEL UP!</h1>
+        <p>Bowl filled!<br>Next Goal: ${getCurrentTarget()} candies.</p>
+        <button onclick="resume()">CONTINUE</button>
+    `;
+
+    overlay.style.display = "flex";
+    }
     function resume() { overlay.style.display = "none"; gameActive = true; spawn(); requestAnimationFrame(loop); }
     function gameOver() {
         gameActive = false;
