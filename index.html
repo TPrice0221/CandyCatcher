@@ -308,23 +308,30 @@
         setTimeout(() => el.remove(), 800);
     }
 
-    function drawBowl() {
-        ctx.fillStyle = "white";
-        ctx.strokeStyle = "#ff69b4";
-        ctx.lineWidth = 6;
-        
-        // Draw rounded rectangle for better browser support
-        const x = bowl.x, y = bowl.y, w = bowl.w, h = bowl.h, r = 30;
-        ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.lineTo(x + w - r, y);
-        ctx.arcTo(x + w, y, x + w, y + r, r);
-        ctx.lineTo(x + w, y + h);
-        ctx.lineTo(x, y + h);
-        ctx.arcTo(x, y, x + r, y, r);
-        ctx.fill();
-        ctx.stroke();
-    }
+ function drawBowl() {
+    ctx.fillStyle = "white";
+    ctx.strokeStyle = "#ff69b4";
+    ctx.lineWidth = 6;
+    
+    // Draw bowl with opening at TOP
+    const x = bowl.x, y = bowl.y, w = bowl.w, h = bowl.h, r = 30;
+    ctx.beginPath();
+    // Top line (opening)
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    // Top-right curve
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    // Right side
+    ctx.lineTo(x + w, y + h);
+    // Bottom curve
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    // Left side
+    ctx.lineTo(x, y + r);
+    // Top-left curve
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.fill();
+    ctx.stroke();
+}
 
     function loop() {
         if (!gameActive) return;
