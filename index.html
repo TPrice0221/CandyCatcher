@@ -170,6 +170,12 @@
     const modalContent = document.getElementById("modal-content");
     const livesDisplay = document.getElementById("lives-display");
     const music = document.getElementById("bgMusic");
+    
+    // Cache DOM elements to avoid repeated queries in game loop
+    const scoreElement = document.getElementById("score");
+    const levelElement = document.getElementById("level");
+    const candyCountElement = document.getElementById("candyCount");
+    const targetDisplayElement = document.getElementById("targetDisplay");
 
     const GAME_W = 900;
     const GAME_H = 700;
@@ -188,6 +194,13 @@
     const badTypes = ['☠️','💀','🧪', '🍄', '💩'];
     const sweetPhrases = ["SWEET!", "Sugar Rush!", "Nom Nom!", "Delicious!"];
     const rottenMessages = {'🧪': "POISONED!", '☠️': "STOLEN!", '💀': "CURSED!", '🍄': "TRAPPED!", '💩': "YUCK!"};
+    
+    // Define colors as constants for feedback text
+    const feedbackColors = {
+        good: '#00ffcc',      // mint
+        life: '#ffffff',      // white
+        bad: '#ff3333'        // bad-red
+    };
 
     // Background Sparkles
     for (let i = 0; i < 60; i++) {
@@ -200,7 +213,9 @@
         });
     }
 
-    function getCurrentTarget() { return 20 + ((level - 1) * 5); }
+    function getCurrentTarget() { 
+        return 20 + ((level - 1) * 5); 
+    }
     
     function updateLivesDisplay() { 
         livesDisplay.innerText = lives > 0 ? "💗".repeat(lives) : "💔"; 
@@ -263,20 +278,52 @@
             });
         }
         
-        let delay = Math.max(250, 750 - (level * 70)); 
+        let delay = Math.max(350, 800 - (level * 70)); 
         spawnTimer = setTimeout(spawn, delay);
+    }
+
+    function getFeedbackStyle(type) {
+        switch(type) {
+            case 'good':
+                return { color: feedbackColors.good, shadow: '2px 2px 0px #d63384' };
+            case 'life':
+                return { color: feedbackColors.life, shadow: '2px 2px 0px #d63384' };
+            case 'bad':
+                return { color: feedbackColors.bad, shadow: '2px 2px 0px #000' };
+            default:
+                return { color: feedbackColors.bad, shadow: '2px 2px 0px #d63384' };
+        }
     }
 
     function pop(text, x, y, type) {
         const el = document.createElement('div');
-        el.className = `feedback-text`;
-        el.style.color = type === 'good' ? 'var(--mint)' : (type === 'life' ? 'white' : 'var(--bad-red)');
-        el.style.textShadow = type === 'bad' ? '2px 2px 0px #000' : '2px 2px 0px #d63384';
+        el.className = 'feedback-text';
+        const style = getFeedbackStyle(type);
+        el.style.color = style.color;
+        el.style.textShadow = style.shadow;
         el.style.left = (x - 125) + 'px';
         el.style.top = (y - 50) + 'px';
         el.innerText = text;
         feedbackLayer.appendChild(el);
         setTimeout(() => el.remove(), 800);
+    }
+
+    function drawBowl() {
+        ctx.fillStyle = "white";
+        ctx.strokeStyle = "#ff69b4";
+        ctx.lineWidth = 6;
+        
+        // Draw rounded rectangle for better browser support
+        const x = bowl.x, y = bowl.y, w = bowl.w, h = bowl.h, r = 30;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.arcTo(x + w, y, x + w, y + r, r);
+        ctx.lineTo(x + w, y + h);
+        ctx.lineTo(x, y + h);
+        ctx.arcTo(x, y, x + r, y, r);
+        ctx.fill();
+        ctx.stroke();
     }
 
     function loop() {
@@ -286,13 +333,15 @@
         // Background particles
         particles.forEach(p => {
             ctx.fillStyle = p.color + '88';
-            ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
-            p.y += p.speed; if (p.y > GAME_H) p.y = 0;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            p.y += p.speed;
+            if (p.y > GAME_H) p.y = 0;
         });
 
-        // The Bowl
-        ctx.fillStyle = "white"; ctx.strokeStyle = "var(--candy-pink)"; ctx.lineWidth = 6;
-        ctx.beginPath(); ctx.roundRect(bowl.x, bowl.y, bowl.w, bowl.h, [0, 0, 30, 30]); ctx.fill(); ctx.stroke();
+        // Draw The Bowl
+        drawBowl();
         
         // Show last 20 collected candies inside bowl
         collected.slice(-20).forEach((c, i) => {
@@ -305,7 +354,8 @@
         for (let i = candies.length - 1; i >= 0; i--) {
             let c = candies[i];
             c.y += c.speed;
-            ctx.font = "48px Arial"; ctx.textAlign = "center";
+            ctx.font = "48px Arial";
+            ctx.textAlign = "center";
             ctx.fillText(c.icon, c.x, c.y);
 
             // Catch Collision
@@ -323,7 +373,7 @@
                     pop(sweetPhrases[Math.floor(Math.random()*sweetPhrases.length)], c.x, bowl.y, 'good');
                     
                     if (collected.length >= currentTarget) {
-                        document.getElementById("candyCount").innerText = collected.length;
+                        candyCountElement.innerText = collected.length;
                         setTimeout(levelUp, 150);
                     }
                 }
@@ -340,10 +390,11 @@
             }
         }
 
-        document.getElementById("score").innerText = score;
-        document.getElementById("level").innerText = level;
-        document.getElementById("candyCount").innerText = collected.length;
-        document.getElementById("targetDisplay").innerText = currentTarget;
+        // Update UI using cached elements
+        scoreElement.innerText = score;
+        levelElement.innerText = level;
+        candyCountElement.innerText = collected.length;
+        targetDisplayElement.innerText = currentTarget;
 
         requestAnimationFrame(loop);
     }
