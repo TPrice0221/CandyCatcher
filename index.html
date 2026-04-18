@@ -231,17 +231,7 @@
     }
     }
 
-    function switchTrack(lvl) {
-        let trackNum = Math.min(lvl, 3);
-        let newSrc = `beat${trackNum}.mp3`;
 
-        if (!music.src.includes(newSrc)) {
-            music.pause();
-            music.src = newSrc;
-            music.load();
-            music.play().catch(()=>{});
-        }
-    }
 
     function bootGame() {
         playMusic();
